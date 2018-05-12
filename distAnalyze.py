@@ -53,6 +53,7 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
     from scipy.interpolate import interp1d
     from numpy import sqrt, pi, log, exp
     import matplotlib.pyplot as plt
+    from distAnalyze import pdf, dpdf, ddpdf, PDF, dPDF, ddPDF
 
     area = []
     n = []
@@ -87,7 +88,7 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
 
     for kind in kinds:
         if distribuition == 'normal':
-            inf, sup = norm.interval(0.9999, loc = 0, scale = 1)
+            inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
         elif distribuition == 'lognormal':
             inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = exp(mu))
 
@@ -110,11 +111,11 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
             yest = pdf(xest,mu,sigma,distribuition)
             
         elif kind == 'PDFm':
-            xest, yest = PDF(nest,mu,sigma, outlier)
+            xest, yest = PDF(nest,mu,sigma, distribuition, outlier)
         elif kind == 'iPDF1':
-            xest, yest = dPDF(nest,mu,sigma, outlier)
+            xest, yest = dPDF(nest,mu,sigma, distribuition, outlier)
         elif kind == 'iPDF2':
-            xest, yest = ddPDF(nest,mu,sigma, outlier)      
+            xest, yest = ddPDF(nest,mu,sigma, distribuition, outlier)      
        
         
         fest = interp1d(xest,pdf(xest,mu, sigma,distribuition),kind = interpolator, fill_value = 'extrapolate')
@@ -164,27 +165,44 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
         
     return area,n
 
-def PDF(pts,mu,sigma,outlier = 0):
-    from scipy.stats import norm
+def PDF(pts,mu,sigma, distribuition, outlier = 0):
+    from scipy.stats import norm, lognorm
     import numpy as np
     from scipy.interpolate import interp1d
-    from math import sqrt, pi, exp
     
+    if distribuition == 'normal':
+        inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
+        outlier_inf = outlier_sup = outlier
 
-    x = np.linspace(-4*sigma+mu-outlier,4*sigma+mu+outlier,int(10e3))
-    y = norm.pdf(x, loc = mu, scale = 0.3)
-    
-    X1 = np.linspace(x[0],mu,int(1e6))
-    Y1 = norm.pdf(X1, loc = mu, scale = sigma)
-    interp = interp1d(Y1,X1)
-    y1 = np.linspace(Y1[0],Y1[-1],pts//2+1)
-    x1 = interp(y1)
-    
-    X2 = np.linspace(mu,x[-1],int(1e6))
-    Y2 = norm.pdf(X2, loc = mu, scale = sigma)
-    interp = interp1d(Y2,X2)
-    y2 = np.flip(y1,0)
-    x2 = interp(y2)
+        X1 = np.linspace(inf-outlier,mu,int(1e6))
+        Y1 = norm.pdf(X1, loc = mu, scale = sigma)
+        interp = interp1d(Y1,X1)
+        y1 = np.linspace(Y1[0],Y1[-1],pts//2+1)
+        x1 = interp(y1)
+        
+        X2 = np.linspace(mu,sup+outlier,int(1e6))
+        Y2 = norm.pdf(X2, loc = mu, scale = sigma)
+        interp = interp1d(Y2,X2)
+        y2 = np.flip(y1,0)
+        x2 = interp(y2)
+
+    elif distribuition == 'lognormal':
+        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        outlier_inf = 0
+        outlier_sup = outlier
+        mode = np.exp(mu - sigma**2)
+        
+        X1 = np.linspace(inf-outlier_inf,mode,int(1e6))
+        Y1 = lognorm.pdf(X1, sigma, loc = 0, scale = np.exp(mu))
+        interp = interp1d(Y1,X1)
+        y1 = np.linspace(Y1[0],Y1[-1],pts//2+1)
+        x1 = interp(y1)
+        
+        X2 = np.linspace(mode,sup+outlier_sup,int(1e6))
+        Y2 = lognorm.pdf(X2, sigma, loc = 0, scale = np.exp(mu))
+        interp = interp1d(Y2,X2)
+        y2 = np.flip(y1,0)
+        x2 = interp(y2)
        
         
     X = np.concatenate([x1[:-1],x2])
@@ -192,16 +210,24 @@ def PDF(pts,mu,sigma,outlier = 0):
     
     return X,Y
 
-def dPDF(pts,mu,sigma, outlier = 0):
+def dPDF(pts,mu,sigma, distribuition, outlier = 0):
     import numpy as np
     from scipy.interpolate import interp1d
-    from math import sqrt, pi
+    from distAnalyze import dpdf
+    from scipy.stats import norm, lognorm
     eps = 5e-5
-   
-    dy = lambda x,u,s : abs(1/(s**3*sqrt(2*pi))*(u-x)*np.exp(-0.5*((u-x)/s)**2))
+
+    if distribuition == 'normal':
+        inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
+        outlier_inf = outlier_sup = outlier
+    elif distribuition == 'lognormal':
+        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        outlier_inf = 0
+        outlier_sup = outlier
+    #dy = lambda x,u,s : abs(1/(s**3*sqrt(2*pi))*(u-x)*np.exp(-0.5*((u-x)/s)**2))
     
-    x = np.linspace(-4*sigma+mu-outlier,4*sigma+mu+outlier,int(10e3))
-    y = dy(x,mu,sigma)
+    x = np.linspace(inf-outlier_inf,sup+outlier_sup,int(10e3))
+    y = dpdf(x,mu,sigma,distribuition)
     
     cdf = np.sum(np.tri(len(x))*y,1)
     cdf = cdf/max(cdf)
@@ -213,17 +239,23 @@ def dPDF(pts,mu,sigma, outlier = 0):
     return X,Y
 
     
-def ddPDF(pts,mu,sigma, outlier = 0):
+def ddPDF(pts,mu,sigma, distribuition, outlier = 0):
     import numpy as np
     from scipy.interpolate import interp1d
-    from math import sqrt, pi
-    import matplotlib.pyplot as plt
+    from distAnalyze import ddpdf
+    from scipy.stats import norm, lognorm
     eps = 5e-5 
-    ddy = lambda x,u,s: abs(-(s**2-u**2+2*u*x-x**2)/(s**5*sqrt(2*pi))*np.exp(-0.5*((u-x)/s)**2))
+    #ddy = lambda x,u,s: abs(-(s**2-u**2+2*u*x-x**2)/(s**5*sqrt(2*pi))*np.exp(-0.5*((u-x)/s)**2))
+    if distribuition == 'normal':
+        inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
+        outlier_inf = outlier_sup = outlier
+    elif distribuition == 'lognormal':
+        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        outlier_inf = 0
+        outlier_sup = outlier
     
-    
-    x = np.linspace(-4*sigma+mu-outlier,4*sigma+mu+outlier,int(10e3))
-    y = ddy(x,mu,sigma)
+    x = np.linspace(inf-outlier_inf,sup+outlier_sup,int(10e3))
+    y = ddpdf(x,mu,sigma,distribuition)
     
     cdf = np.sum(np.tri(len(x))*y,1)
     cdf = cdf/max(cdf)
@@ -238,7 +270,7 @@ def ddPDF(pts,mu,sigma, outlier = 0):
 
 def pdf(x, u, s, distribuition):
     import numpy as np
-    from numpy import pi, sqrt, log, exp
+    from numpy import pi, sqrt, log, exp, isnan
 
     if distribuition == 'normal':
         y = 1/(s*sqrt(2*pi))*exp(-0.5*((x-u)/s)**2)
@@ -250,7 +282,7 @@ def pdf(x, u, s, distribuition):
 
 def dpdf(x, u, s, distribuition):
     import numpy as np
-    from numpy import pi, sqrt, log, exp
+    from numpy import pi, sqrt, log, exp, isnan
     
     if distribuition == 'normal':
         y = abs(1/(s**3*sqrt(2*pi))*(u-x)*np.exp(-0.5*((u-x)/s)**2))
@@ -262,7 +294,7 @@ def dpdf(x, u, s, distribuition):
 
 def ddpdf(x, u, s, distribuition):
     import numpy as np
-    from numpy import pi, sqrt, log, exp
+    from numpy import pi, sqrt, log, exp, isnan
     
     if distribuition == 'normal':
         y = abs(-(s**2-u**2+2*u*x-x**2)/(s**5*sqrt(2*pi))*np.exp(-0.5*((u-x)/s)**2))
