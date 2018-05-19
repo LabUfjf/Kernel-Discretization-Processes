@@ -62,8 +62,7 @@ def linspace(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', poi
           plt.plot(np.zeros(nest)+a-outlier_inf,yest,'rx', ms = 5, label = 'Y points')
     plt.legend()
 
-def cdf(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False, PDF = False):
-    
+def CDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False, PDF = False):
     """
     Returns a generic plot from CDF of a selected distribuition based on cdf discretization.
 
@@ -151,13 +150,109 @@ def cdf(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points =
         ax2.tick_params(axis='y', labelcolor=blue)
 
         if points == 'PDF':
-        	if distribuition == 'lognormal':
-        		pts, = ax2.plot(xest,sp.lognorm.pdf(xest, sigma, loc = 0, scale = np.exp(mu)), 'ok')
-        	elif distribuition == 'normal':
-        		pts, = ax2.plot(xest,sp.norm.pdf(xest, loc = mu, scale = sigma), 'ok')
-        	ax1.legend([pdf,cdf,pts], ['PDF', 'CDF', 'Points'])
+            if distribuition == 'lognormal':
+                pts, = ax2.plot(xest,sp.lognorm.pdf(xest, sigma, loc = 0, scale = np.exp(mu)), 'ok')
+            elif distribuition == 'normal':
+                pts, = ax2.plot(xest,sp.norm.pdf(xest, loc = mu, scale = sigma), 'ok')
+            ax1.legend([pdf,cdf,pts], ['PDF', 'CDF', 'Points'])
     if grid:
           ax2.vlines(xest,0,yest,linestyle=':')
           ax2.hlines(yest,a,xest,linestyle = ':')
           ypts, = ax1.plot(xest,np.zeros(nest),'rx', ms = 5)
           ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'Points', 'X Points'])
+
+def PDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', grid = False, points = False):
+    """
+    Returns a generic plot from PDF of a selected distribuition based on PDFm discretization.
+
+    Parameters
+    ----------
+    nest: int
+        The number of estimation points.
+    mu: int, optional
+        Specifies the mean of distribuition.
+        Defaut is 0.
+    sigma: int, optional
+        Specifies the standard desviation of a distribuition.
+        Defaut is 1.
+    outlier: int, optional
+        Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
+        Defaut is 0
+    distribuition: str, optional
+        Select the distribuition to analyze.
+        ('normal', 'lognormal')
+        Defaut is 'normal'
+    points: str, optional
+        Show the estimation points along the follow plots ('PDF' or 'CDF')
+        Defaut is False.
+    grid: bool, optional
+        If True, a grid of discatization will be show in the plot.
+        Defaut is False.
+    """
+
+    import numpy as np
+    import scipy.stats as sp
+    import matplotlib.pyplot as plt
+    from scipy.interpolate import interp1d
+
+    ngrid = int(1e6)
+    if not nest %2:
+          nest = nest -1
+    if distribuition == 'normal':
+        outlier_inf = outlier_sup = outlier
+        a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
+        a,b = a-outlier_inf, b+outlier_sup
+        x = np.linspace(a,b,ngrid)
+        y = sp.norm.pdf(x,loc = mu, scale = sigma)
+        
+        X1 = np.linspace(a,mu,ngrid)
+        Y1 = sp.norm.pdf(X1,loc = mu, scale = sigma)
+        interp = interp1d(Y1,X1)
+        y1 = np.linspace(Y1[0],Y1[-1],nest//2+1)
+        x1 = interp(y1)
+
+        X2 = np.linspace(mu,b,ngrid)
+        Y2 = sp.norm.pdf(X2, loc = mu, scale = sigma)
+        interp = interp1d(Y2,X2)
+        y2 = np.flip(y1,0)
+        x2 = interp(y2)
+        X = np.concatenate([x1[:-1],x2])
+        Y = np.concatenate([y1[:-1],y2])
+
+    elif distribuition == 'lognormal':
+        outlier_inf = 0
+        outlier_sup = outlier
+        mode = np.exp(mu-sigma**2)
+        a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        a,b = a-outlier_inf, b+outlier_sup
+        x = np.linspace(a,b,ngrid)
+        y = sp.lognorm.pdf(x,sigma, loc = 0, scale = np.exp(mu))
+
+        X1 = np.linspace(a,mode,ngrid)
+        Y1 = sp.lognorm.pdf(X1,sigma, loc = 0, scale = np.exp(mu))
+        interp = interp1d(Y1,X1)
+        y1 = np.linspace(Y1[0],Y1[-1],nest//2+1)
+        x1 = interp(y1)
+
+        X2 = np.linspace(mode,b,ngrid)
+        Y2 = sp.lognorm.pdf(X2, sigma, loc = 0, scale = np.exp(mu))
+        interp = interp1d(Y2,X2)
+        y2 = np.flip(y1,0)
+        x2 = interp(y2)
+
+        X = np.concatenate([x1[:-1],x2])
+        Y = np.concatenate([y1[:-1],y2])
+
+    plt.plot(x,y,label = 'PDF')
+    plt.ylabel('Probability')
+    plt.xlabel('x')
+    if points:
+      plt.plot(X,Y,'ok', label = 'points')
+
+    if grid:
+        plt.vlines(X,0,Y,linestyle=':')
+        plt.hlines(Y,a,X,linestyle = ':')
+        plt.plot(X,np.zeros(nest),'rx', ms = 5, label = 'X points')
+
+    plt.legend()
+         
