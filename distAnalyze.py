@@ -49,9 +49,8 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
     """    
     import numpy as np
     from scipy.stats import norm, lognorm
-    from numpy import pi
     from scipy.interpolate import interp1d
-    from numpy import sqrt, pi, log, exp
+    from numpy import  exp
     import matplotlib.pyplot as plt
     from distAnalyze import pdf, dpdf, ddpdf, PDF, dPDF, ddPDF
 
@@ -75,7 +74,7 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
         truth1 = ddpdf
     elif axis == 'X':
         truth1 = lambda x,mu,sigma,distribuition: x
-    else: return 'No valid axis'
+    #else: return 'No valid axis'
             
     probROIord = {}
     areaROIord = {}
@@ -157,13 +156,112 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
             if weight:
                 plt.logy(probROIord[kind],areaROIord[kind]*div[kind],'-o',label = kind, ms = 3)
             else: plt.plot(probROIord[kind],areaROIord[kind],'-o',label = kind, ms = 3)
+            
 
             plt.yscale('log')
+            plt.xlabel(axis)
+            plt.ylabel('Error')
             plt.legend()
         
         #plt.title('%s - Pontos = %d, div = %s - %s' %(j,nest, divs,interpolator))
         
-    return area,n
+    return area,[probROIord,areaROIord]
+
+def diffArea3d(nest, diffNest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot = True):
+
+    """
+    Return an error area between a analitic function and a estimated discretization from a distribuition.
+
+    Parameters
+    ----------
+    nest: ndarray, int
+        The beginning and the end of the estimation number (e.g. nest = [100,500]).
+    diffNest: int
+        The steps of nest (e.g. diffNest = 100; will create an array beginning in 100 and ending in 500 with steps of 100. [100,200,300,400,500]).
+    outlier: int, optional
+        Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
+        Defaut is 0
+    kinds: str or array, optional
+        specifies the kind of distribuition to analize.
+        ('Linspace', 'CDFm', 'PDFm', 'iPDF1', 'iPDF2', 'all').
+        Defaut is 'all'.
+    axis: str, optional
+        specifies the x axis to analize
+        ('probability', 'derivative', '2nd_derivative', 'X').
+        Defaut is 'probability'.
+    ROI: int, optional
+        Specifies the number of regions of interest.
+        Defaut is 20.
+    mu: int, optional
+        Specifies the mean of distribuition.
+        Defaut is 0.
+    sigma: int, optional
+        Specifies the standard desviation of a distribuition.
+        Defaut is 1.
+    weight: bool, optional
+        if True, each ROI will have a diferent weight to analyze.
+        Defaut is False
+    interpolator: str, optional
+        Specifies the kind of interpolation as a string
+        ('linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'
+        where 'zero', 'slinear', 'quadratic' and 'cubic' refer to a spline
+        interpolation of zeroth, first, second or third order) or as an
+        integer specifying the order of the spline interpolator to use.
+        Default is 'linear'.
+    distribuition: str, optional
+        Select the distribuition to analyze.
+        ('normal', 'lognormal')
+        Defaut is 'normal'
+    plot: bool, optional
+        If True, a plot will be ploted with the analyzes
+        Defaut is True
+
+    """    
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    from distAnalyze import diffArea
+
+    nest = list(range(nest[0],nest[1]+1,diffNest))
+    
+    if kinds == 'all': 
+        kinds = ['Linspace', 'CDFm', 'PDFm', 'iPDF1', 'iPDF2']
+    elif type(kinds) == str:
+        kinds = [kinds]
+  
+    probROIord = {}
+    areaROIord = {}
+    for n in nest:
+        area,[probROIord[n],areaROIord[n]] = diffArea(n, outlier, kinds, axis, ROI, mu, sigma, weight, interpolator, distribuition, plot = False)
+
+    x = np.sort(nest*ROI) #Nest
+    y = np.array(list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]])*len(nest)) #Prob
+    z = {} #error
+    
+    for k in kinds:
+          z[k] = []
+          for i in nest:
+                z[k].append(areaROIord[i][k])
+          z[k] = np.concatenate(z[k])
+    
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    
+    for k in kinds:
+        ax.plot_trisurf(x,y,z[k],alpha = 0.4, label = k)
+
+    ax.set_xlabel('Nº of estimation points', fontsize = 20)
+    ax.set_ylabel(axis, fontsize = 20)
+    ax.zaxis.set_rotate_label(False)
+    ax.set_zlabel('Sum of errors', fontsize = 20, rotation = 90)
+    ax.view_init(20, 225)
+    plt.draw()
+    plt.legend(prop = {'size':25}, loc = (0.6,0.5))
+    ax.show()
+    
+    
+
 
 def PDF(pts,mu,sigma, distribuition, outlier = 0):
     from scipy.stats import norm, lognorm
