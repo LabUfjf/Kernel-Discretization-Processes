@@ -234,29 +234,32 @@ def diffArea3d(nest, diffNest, outlier = 0, kinds = 'all', axis = 'probability',
     for n in nest:
         area,[probROIord[n],areaROIord[n]] = diffArea(n, outlier, kinds, axis, ROI, mu, sigma, weight, interpolator, distribuition, plot = False)
 
-    x = np.sort(nest*ROI) #Nest
-    y = np.array(list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]])*len(nest)) #Prob
+    #x = np.sort(nest*ROI) #Nest
+    #y = np.array(list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]])*len(nest)) #Prob
+    x,y = np.meshgrid(nest,list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]]))
     z = {} #error
     
     for k in kinds:
           z[k] = []
           for i in nest:
                 z[k].append(areaROIord[i][k])
-          z[k] = np.concatenate(z[k])
+          z[k] = np.reshape(np.concatenate(z[k]),x.shape,'F')
     
 
     fig = plt.figure()
     ax = fig.gca(projection='3d')
     
     for k in kinds:
-        ax.plot_trisurf(x,y,z[k],alpha = 0.4, label = k)
+        ax.plot_surface(x,y,np.log10(z[k]),alpha = 0.4, label = k, antialiased=True)
 
     ax.set_xlabel('Nº of estimation points', fontsize = 20)
+    ax.set_xticks(nest)
     ax.set_ylabel(axis, fontsize = 20)
     ax.zaxis.set_rotate_label(False)
     ax.set_zlabel('Sum of errors', fontsize = 20, rotation = 90)
     ax.view_init(20, 225)
     plt.draw()
+    #ax.yaxis.set_scale('log')
     plt.legend(prop = {'size':25}, loc = (0.6,0.5))
     ax.show()
     
