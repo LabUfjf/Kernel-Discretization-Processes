@@ -167,7 +167,7 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
         
     return area,[probROIord,areaROIord]
 
-def diffArea3d(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = True):
+def diffArea3(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = True):
 
     """
     Return an error area between a analitic function and a estimated discretization from a distribuition.
@@ -212,7 +212,8 @@ def diffArea3d(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 
         ('normal', 'lognormal')
         Defaut is 'normal'
     plot: bool, optional
-        If True, a plot will be ploted with the analyzes
+        If True, a plot will be ploted with the analyzes in 3d with Nest x error x axis
+        If False, a 2d plot will be ploted with Nest x Area
         Defaut is True
 
     """    
