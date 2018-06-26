@@ -167,7 +167,7 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
         
     return area,[probROIord,areaROIord]
 
-def diffArea3d(nest, diffNest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot = True):
+def diffArea3d(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = True):
 
     """
     Return an error area between a analitic function and a estimated discretization from a distribuition.
@@ -175,9 +175,8 @@ def diffArea3d(nest, diffNest, outlier = 0, kinds = 'all', axis = 'probability',
     Parameters
     ----------
     nest: ndarray, int
-        The beginning and the end of the estimation number (e.g. nest = [100,500]).
-    diffNest: int
-        The steps of nest (e.g. diffNest = 100; will create an array beginning in 100 and ending in 500 with steps of 100. [100,200,300,400,500]).
+        The array of the estimation points (e.g. nest = [100,200,300,400,500]).
+   
     outlier: int, optional
         Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
         Defaut is 0
@@ -222,7 +221,6 @@ def diffArea3d(nest, diffNest, outlier = 0, kinds = 'all', axis = 'probability',
     from mpl_toolkits.mplot3d import Axes3D
     from distAnalyze import diffArea
 
-    nest = list(range(nest[0],nest[1]+1,diffNest))
     
     if kinds == 'all': 
         kinds = ['Linspace', 'CDFm', 'PDFm', 'iPDF1', 'iPDF2']
@@ -231,12 +229,23 @@ def diffArea3d(nest, diffNest, outlier = 0, kinds = 'all', axis = 'probability',
   
     probROIord = {}
     areaROIord = {}
+    area = {}
     for n in nest:
-        area,[probROIord[n],areaROIord[n]] = diffArea(n, outlier, kinds, axis, ROI, mu, sigma, weight, interpolator, distribuition, plot = False)
-
+        area[n],[probROIord[n],areaROIord[n]] = diffArea(n, outlier, kinds, axis, ROI, mu, sigma, weight, interpolator, distribuition, plot = False)
+        
     #x = np.sort(nest*ROI) #Nest
     #y = np.array(list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]])*len(nest)) #Prob
+    
+    
+    area2 = {kinds[0]:[]}
+    for k in range(len(kinds)):
+          area2[kinds[k]] = []
+          for n in nest:
+                area2[kinds[k]].append(area[n][k])
+    
+                       
     x,y = np.meshgrid(nest,list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]]))
+    area = area2
     z = {} #error
     
     for k in kinds:
@@ -245,25 +254,33 @@ def diffArea3d(nest, diffNest, outlier = 0, kinds = 'all', axis = 'probability',
                 z[k].append(areaROIord[i][k])
           z[k] = np.reshape(np.concatenate(z[k]),x.shape,'F')
     
-
-    fig = plt.figure()
-    ax = fig.gca(projection='3d')
-    
-    for k in kinds:
-        ax.plot_surface(x,y,np.log10(z[k]),alpha = 0.4, label = k, antialiased=True)
-
-    ax.set_xlabel('Nº of estimation points', fontsize = 20)
-    ax.set_xticks(nest)
-    ax.set_ylabel(axis, fontsize = 20)
-    ax.zaxis.set_rotate_label(False)
-    ax.set_zlabel('Sum of errors', fontsize = 20, rotation = 90)
-    ax.view_init(20, 225)
-    plt.draw()
-    #ax.yaxis.set_scale('log')
-    plt.legend(prop = {'size':25}, loc = (0.6,0.5))
-    ax.show()
-    
-    
+    if plot3d:
+          fig = plt.figure()
+          ax = fig.gca(projection='3d')
+                
+          
+          for k in kinds:
+              ax.plot_surface(x,y,np.log10(z[k]),alpha = 0.4, label = k, antialiased=True)
+      
+          ax.set_xlabel('Nº of estimation points', fontsize = 20)
+          ax.set_xticks(nest)
+          ax.set_ylabel(axis, fontsize = 20)
+          ax.zaxis.set_rotate_label(False)
+          ax.set_zlabel('Sum of errors', fontsize = 20, rotation = 90)
+          ax.view_init(20, 225)
+          plt.draw()
+          #ax.yaxis.set_scale('log')
+          plt.legend(prop = {'size':25}, loc = (0.6,0.5))
+          ax.show()
+    else:
+          plt.figure()
+          for k in kinds:
+                plt.plot(nest,area[k], 'o-', label = k)
+          plt.xlabel('Nº of estimation points', fontsize = 20)
+          plt.ylabel('Area')
+          plt.legend()
+          plt.yscale('log')
+                
 
 
 def PDF(pts,mu,sigma, distribuition, outlier = 0):
