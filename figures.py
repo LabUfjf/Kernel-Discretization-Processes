@@ -410,7 +410,7 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
     from distAnalyze import ddpdf
     from scipy.interpolate import interp1d
 
-    ngrid = int(10e3)
+    ngrid = int(1e6)
     eps = 5e-5
     blue = '#1f77b4ff'
     orange = '#ff7f0eff'
@@ -418,7 +418,7 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
     if distribuition == 'normal':
         outlier_inf = outlier_sup = outlier
         a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
-        a,b = a-outlier_inf, b+outlier_sup
+        a,b =   a-outlier_inf, b+outlier_sup
         
 
     elif distribuition == 'lognormal':
@@ -431,7 +431,11 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
     y = ddpdf(x, mu, sigma, distribuition)
     y = y/sum(y)
 
-    ygrid = np.sum(np.tri(ngrid)*y,1)
+    #ygrid = np.sum(np.tri(ngrid)*y,1)
+    ygrid = [y[0]]
+    for i in range(1,ngrid):
+        ygrid.append(y[i]+ygrid[i-1])
+   
     xgrid = x
 
     interp = interp1d(ygrid,xgrid, fill_value = 'extrapolate')
@@ -476,5 +480,8 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
           ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'Points', 'X Points'])
     
     if PDF:
-        pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
+        if distribuition == 'lognormal':
+            pdf, = ax2.plot(x,sp.norm.pdf(x, sigma, loc = 0, scale = np.exp(mu)), color = blue)
+        elif distribuition == 'normal':
+            pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
         

@@ -117,8 +117,10 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
             xest, yest = ddPDF(nest,mu,sigma, distribuition, outlier)      
        
         
-        fest = interp1d(xest,pdf(xest,mu, sigma,distribuition),kind = interpolator, fill_value = 'extrapolate')
+        fest = interp1d(xest,pdf(xest,mu, sigma,distribuition),kind = interpolator, bounds_error = False, fill_value = 'extrapolate')
         
+        #fest = lambda x: np.concatenate([fest1(x)[fest1(x) != -1],np.ones(len(fest1(x)[fest1(x) == -1]))*fest1(x)[fest1(x) != -1][-1]])
+            
         yestGrid = []
         ytruthGrid = []
         ytruthGrid2 = []
@@ -217,6 +219,8 @@ def diffArea3(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 ,
         Defaut is True
 
     """    
+    
+    #nest1 = np.concatenate([list(range(10,250,10)),list(range(250,550,50)),list(range(600,1100,100)),list(range(1500,5500,500))])
     import numpy as np
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
@@ -273,6 +277,7 @@ def diffArea3(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 ,
           #ax.yaxis.set_scale('log')
           plt.legend(prop = {'size':25}, loc = (0.6,0.5))
           ax.show()
+          return x,y,log10(z[k])
     else:
           plt.figure()
           for k in kinds:
@@ -281,8 +286,27 @@ def diffArea3(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 ,
           plt.ylabel('Area')
           plt.legend()
           plt.yscale('log')
+          return nest, area 
                 
-
+      
+# =============================================================================
+# x, y = np.meshgrid(nest,sigma)
+# 
+# z = {}
+# kinds = ['Linspace', 'CDFm', 'PDFm', 'iPDF1', 'iPDF2']
+# for k in kinds:
+# 	z[k] = []
+# 	for i in range(len(sigma)):
+# 		z[k].append(area2[i][k])
+# 	z[k] = np.reshape(np.concatenate(z[k]),x.shape)
+# 
+# fig = plt.figure()
+# ax = fig.gca(projection='3d')
+# 
+# for k in kinds:
+#     ax.plot_surface(x,y,np.log10(z[k]),alpha = 0.4, label = k, antialiased=True)
+# 
+# =============================================================================
 
 def PDF(pts,mu,sigma, distribuition, outlier = 0):
     from scipy.stats import norm, lognorm
@@ -335,6 +359,7 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0):
     from distAnalyze import dpdf
     from scipy.stats import norm, lognorm
     eps = 5e-5
+    ngrid = int(1e6)
 
     if distribuition == 'normal':
         inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
@@ -345,11 +370,18 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0):
         outlier_sup = outlier
     #dy = lambda x,u,s : abs(1/(s**3*sqrt(2*pi))*(u-x)*np.exp(-0.5*((u-x)/s)**2))
     
-    x = np.linspace(inf-outlier_inf,sup+outlier_sup,int(10e3))
+    x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
     y = dpdf(x,mu,sigma,distribuition)
-    
-    cdf = np.sum(np.tri(len(x))*y,1)
+    cdf = [y[0]]
+    #t = time.time()
+    for i in range(1,ngrid):
+        #cdf.append(np.sum(np.tri(step,i+1,i)*y[:i+1],1))
+        cdf.append(y[i]+cdf[i-1])
+       
+    #cdf = np.sum(np.tri(len(x))*y,1)    
+    #cdf = np.concatenate(cdf)
     cdf = cdf/max(cdf)
+    #time.time()-t
     
     interp = interp1d(cdf,x, fill_value = 'extrapolate')
     Y = np.linspace(eps,1-eps,pts)
@@ -364,6 +396,7 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0):
     from distAnalyze import ddpdf
     from scipy.stats import norm, lognorm
     eps = 5e-5 
+    ngrid = int(1e6)
     #ddy = lambda x,u,s: abs(-(s**2-u**2+2*u*x-x**2)/(s**5*sqrt(2*pi))*np.exp(-0.5*((u-x)/s)**2))
     if distribuition == 'normal':
         inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
@@ -373,10 +406,13 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0):
         outlier_inf = 0
         outlier_sup = outlier
     
-    x = np.linspace(inf-outlier_inf,sup+outlier_sup,int(10e3))
+    x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
     y = ddpdf(x,mu,sigma,distribuition)
     
-    cdf = np.sum(np.tri(len(x))*y,1)
+    #cdf = np.sum(np.tri(len(x))*y,1)
+    cdf = [y[0]]
+    for i in range(1,ngrid):
+        cdf.append(y[i]+cdf[i-1])
     cdf = cdf/max(cdf)
     
     interp = interp1d(cdf,x, fill_value = 'extrapolate')
