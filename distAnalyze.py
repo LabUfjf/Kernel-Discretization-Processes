@@ -1,5 +1,5 @@
 
-def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot = True):
+def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot = True):
     
     """
     Return an error area between a analitic function and a estimated discretization from a distribuition.
@@ -52,6 +52,7 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
     from scipy.interpolate import interp1d
     from numpy import  exp
     import matplotlib.pyplot as plt
+    from statsmodels.distributions import ECDF
     from distAnalyze import pdf, dpdf, ddpdf, PDF, dPDF, ddPDF
 
     area = []
@@ -87,9 +88,11 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
 
     for kind in kinds:
         if distribuition == 'normal':
-            inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
+              inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
+            
         elif distribuition == 'lognormal':
-            inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = exp(mu))
+              inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = exp(mu))
+            
 
         xgrid = np.linspace(inf,sup,ngrid)
         xgridROI = xgrid.reshape([ROI,ngrid//ROI])
@@ -97,17 +100,51 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
         dx = np.diff(xgrid)[0]
         
         if kind == 'Linspace':
-            xest = np.linspace(inf-outlier_inf,sup+outlier_sup,nest)
+            if not data:  
+                  xest = np.linspace(inf-outlier_inf,sup+outlier_sup,nest)
+            else:
+                  if distribuition == 'normal':
+                        d = np.random.normal(loc = mu, scale = sigma, size = data)
+                        inf,sup = min(d),max(d)
+                        xest = np.linspace(inf-outlier_inf,sup+outlier_sup,nest)
+                  elif distribuition == 'lognormal':
+                        d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
+                        inf,sup = min(d),max(d)
+                        xest = np.linspace(inf-outlier_inf,sup+outlier_sup,nest)
+                        
             yest = pdf(xest,mu,sigma,distribuition)
             
         elif kind == 'CDFm':
             eps = 5e-5
             yest = np.linspace(0+eps,1-eps,nest)
             if distribuition == 'normal':
-                xest = norm.ppf(yest, loc = mu, scale = sigma)
+                if not data:
+                      xest = norm.ppf(yest, loc = mu, scale = sigma)
+                      yest = pdf(xest,mu,sigma,distribuition)
+                else:
+                      d = np.random.normal(loc = mu, scale = sigma, size = data)
+                      ecdf = ECDF(d)
+                      inf,sup = min(d),max(d)
+                      xest = np.linspace(inf,sup,data)
+                      yest = ecdf(xest)
+                      interp = interp1d(yest,xest,fill_value = 'extrapolate', kind = 'nearest')
+                      yest = np.linspace(eps,1-eps,nest)
+                      xest = interp(yest)
+                
             elif distribuition == 'lognormal':
-                xest = lognorm.ppf(yest, sigma, loc = 0, scale = exp(mu))
-            yest = pdf(xest,mu,sigma,distribuition)
+                if not data:
+                      xest = lognorm.ppf(yest, sigma, loc = 0, scale = exp(mu))
+                      yest = pdf(xest,mu,sigma,distribuition)
+                else:
+                      d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
+                      ecdf = ECDF(d)
+                      inf,sup = min(d),max(d)
+                      xest = np.linspace(inf,sup,nest)
+                      yest = ecdf(xest)
+                      interp = interp1d(yest,xest,fill_value = 'extrapolate', kind = 'nearest')
+                      yest = np.linspace(eps,1-eps,nest)
+                      xest = interp(yest)
+            
             
         elif kind == 'PDFm':
             xest, yest = PDF(nest,mu,sigma, distribuition, outlier)
@@ -169,7 +206,7 @@ def diffArea(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , 
         
     return area,[probROIord,areaROIord]
 
-def diffArea3(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = True):
+def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = True):
 
     """
     Return an error area between a analitic function and a estimated discretization from a distribuition.
@@ -236,7 +273,7 @@ def diffArea3(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 ,
     areaROIord = {}
     area = {}
     for n in nest:
-        area[n],[probROIord[n],areaROIord[n]] = diffArea(n, outlier, kinds, axis, ROI, mu, sigma, weight, interpolator, distribuition, plot = False)
+        area[n],[probROIord[n],areaROIord[n]] = diffArea(n, outlier, data, kinds, axis, ROI, mu, sigma, weight, interpolator, distribuition, plot = False)
         
     #x = np.sort(nest*ROI) #Nest
     #y = np.array(list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]])*len(nest)) #Prob
@@ -251,21 +288,27 @@ def diffArea3(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 ,
                        
     x,y = np.meshgrid(nest,list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]]))
     area = area2
-    z = {} #error
     
-    for k in kinds:
-          z[k] = []
-          for i in nest:
-                z[k].append(areaROIord[i][k])
-          z[k] = np.reshape(np.concatenate(z[k]),x.shape,'F')
-    
+# =============================================================================
+#     z = {} #error
+#     
+#     for k in kinds:
+#           z[k] = []
+#           for i in nest:
+#                 z[k].append(areaROIord[i][k])
+#           z[k] = np.reshape(np.concatenate(z[k]),x.shape,'F')
+# =============================================================================
     if plot3d:
           fig = plt.figure()
           ax = fig.gca(projection='3d')
                 
-          
+          z = {} #error
           for k in kinds:
-              ax.plot_surface(x,y,np.log10(z[k]),alpha = 0.4, label = k, antialiased=True)
+               z[k] = []
+               for i in nest:
+                     z[k].append(areaROIord[i][k])
+               z[k] = np.reshape(np.concatenate(z[k]),x.shape,'F')
+               ax.plot_surface(x,y,np.log10(z[k]),alpha = 0.4, label = k, antialiased=True)
       
           ax.set_xlabel('Nº of estimation points', fontsize = 20)
           ax.set_xticks(nest)
@@ -277,15 +320,19 @@ def diffArea3(nest, outlier = 0, kinds = 'all', axis = 'probability', ROI = 20 ,
           #ax.yaxis.set_scale('log')
           plt.legend(prop = {'size':25}, loc = (0.6,0.5))
           ax.show()
-          return x,y,log10(z[k])
+          return x,y,np.log10(z[k])
     else:
-          plt.figure()
+          plt.figure(figsize = (12,8),dpi = 250)
           for k in kinds:
                 plt.plot(nest,area[k], 'o-', label = k)
-          plt.xlabel('Nº of estimation points', fontsize = 20)
-          plt.ylabel('Area')
-          plt.legend()
+          plt.xlabel('Nº of estimation points', fontsize = 30)
+          plt.ylabel('Error', fontsize = 30)
+          plt.legend(prop = {'size':18})
           plt.yscale('log')
+          plt.tick_params(labelsize = 18)
+          plt.tight_layout()
+          #plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/error_sigma_%.2f_interpolator_%s.png"%(sigma,interpolator))
+
           return nest, area 
                 
       

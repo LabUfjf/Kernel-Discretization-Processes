@@ -1,4 +1,4 @@
-def linspace(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = False, grid = False):
+def linspace(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal',data = 0, points = False, grid = False):
 
     """
     Returns a generic plot of a selected distribuition based on linspace discretization.
@@ -20,6 +20,9 @@ def linspace(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', poi
         Select the distribuition to analyze.
         ('normal', 'lognormal')
         Defaut is 'normal'
+    data: int, optional
+        If data > 0, a randon data will be inserted insted analitcs data.
+        Defaut is 0.
     points: bool, optional
         If True, it will plot with the discratization points on its PDF.
         Defaut is False.
@@ -35,24 +38,37 @@ def linspace(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', poi
 
     if distribuition == 'normal':
         outlier_inf = outlier_sup = outlier
-        a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
+        if not data:
+              a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
+        else:
+              d = np.random.normal(loc = mu, scale = sigma, size = data)
+              a,b = min(d),max(d)
+              
         xgrid = np.linspace(a-outlier_inf,b+outlier_sup,ngrid)
         xest = np.linspace(min(xgrid), max(xgrid), nest)
         ygrid = sp.norm.pdf(xgrid,loc = mu, scale = sigma)
         yest = sp.norm.pdf(xest, loc = mu, scale = sigma)
+              
     
     elif distribuition == 'lognormal':
         outlier_inf = 0
         outlier_sup = outlier
-        a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        if not data:
+              a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        else:
+              d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
+              a,b = min(d),max(d)
+              
         xgrid = np.linspace(a-outlier_inf,b+outlier_sup,ngrid)
         xest = np.linspace(min(xgrid), max(xgrid), nest)
         ygrid = sp.lognorm.pdf(xgrid, sigma, loc = 0, scale = np.exp(mu))
         yest = sp.lognorm.pdf(xest, sigma, loc = 0, scale = np.exp(mu))
 
-    plt.plot(xgrid,ygrid, label = '%s PDF' %distribuition)
-    plt.xlabel('X')
-    plt.ylabel('Probability')
+    plt.figure(figsize = (12,8))       
+    plt.plot(xgrid,ygrid, label = 'PDF')
+
+    plt.xlabel('X',fontsize = 30)
+    plt.ylabel('Probability',fontsize = 30)
 
     if points:
         plt.plot(xest,yest,'ok', label = 'Linspace Points')
@@ -60,10 +76,15 @@ def linspace(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', poi
           plt.vlines(xest,0,yest,linestyle=':')
           plt.hlines(yest,a-outlier_inf,xest,linestyle = ':')
           plt.plot(np.zeros(nest)+a-outlier_inf,yest,'rx', ms = 5, label = 'Y points')
-    plt.legend()
-    plt.title('$\mu$ = %.1f, $\sigma$ = %.1f - Linspace' %(mu,sigma))
+    plt.legend(prop = {'size':18})
+    plt.xticks(size = 18)
+    plt.yticks(size = 18)
+    #plt.title('$\mu$ = %.1f, $\sigma$ = %.1f - Linspace' %(mu,sigma))
+    plt.tight_layout()
+    #plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/linspace.png")
 
-def CDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False, PDF = False):
+
+def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal', points = None, grid = False, PDF = False):
     """
     Returns a generic plot from CDF of a selected distribuition based on cdf discretization.
 
@@ -98,6 +119,9 @@ def CDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points 
     import numpy as np
     import scipy.stats as sp
     import matplotlib.pyplot as plt
+    from statsmodels.distributions import ECDF
+    from scipy.interpolate import interp1d
+
 
     ngrid = int(1e6)
     eps = 5e-5
@@ -106,37 +130,80 @@ def CDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points 
 
     if distribuition == 'normal':
         outlier_inf = outlier_sup = outlier
-        a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
-        a,b = a-outlier_inf, b+outlier_sup
+        if not data:
+              a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
+              a,b = a-outlier_inf, b+outlier_sup
+              
+              yest = np.linspace(eps, 1-eps, nest)
+              xest = sp.norm.ppf(yest, loc = mu, scale = sigma)
+              
+        else:
+              d = np.random.normal(loc = mu, scale = sigma, size = data)
+              ecdf = ECDF(d)
+              a,b = min(d),max(d)
+              xest = np.linspace(a,b,data)
+              yest = ecdf(xest)
+              interp = interp1d(yest,xest,fill_value = 'extrapolate', kind = 'nearest')
+              yest = np.linspace(eps,1-eps,nest)
+              xest = interp(yest)
+              
+              #a,b = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              #yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              #xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              #yest = np.cumsum(yest)/max(np.cumsum(yest))
+              #yest = np.linspace(min(yest),max(yest),nest)
+              
         x = np.linspace(a,b,ngrid)
         y = sp.norm.pdf(x,loc = mu, scale = sigma)
+        
         
         ygrid = np.linspace(eps, 1-eps, ngrid)
         xgrid = sp.norm.ppf(ygrid, loc = mu, scale = sigma)
 
-        yest = np.linspace(eps, 1-eps, nest)
-        xest = sp.norm.ppf(yest, loc = mu, scale = sigma)
-
     elif distribuition == 'lognormal':
         outlier_inf = 0
         outlier_sup = outlier
-        a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
-        a,b = a-outlier_inf, b+outlier_sup
+        if not data:
+              a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              a,b = a-outlier_inf, b+outlier_sup
+      
+              yest = np.linspace(eps, 1-eps, nest)
+              xest = sp.lognorm.ppf(yest, sigma, loc = 0, scale = np.exp(mu))
+              
+        else:
+              d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
+              #a,b = min(d),max(d)+outlier_sup
+              ecdf = ECDF(d)
+              a,b = min(d),max(d)
+              xest = np.linspace(a,b,nest)
+              yest = ecdf(xest)
+              interp = interp1d(yest,xest,fill_value = 'extrapolate', kind = 'nearest')
+              yest = np.linspace(eps,1-eps,nest)
+              xest = interp(yest)
+              
+              #yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              #xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              #yest = np.cumsum(yest)/max(np.cumsum(yest))
+              #yest = np.linspace(min(yest),max(yest),nest)
+              
+            
+              
+        ygrid = np.linspace(eps, 1-eps, ngrid)
+        xgrid = sp.lognorm.ppf(ygrid, sigma, loc = 0, scale = np.exp(mu))
+              
         x = np.linspace(a,b,ngrid)
         y = sp.lognorm.pdf(x,sigma, loc = 0, scale = np.exp(mu))
 
-        ygrid = np.linspace(eps, 1-eps, ngrid)
-        xgrid = sp.lognorm.ppf(ygrid, sigma, loc = 0, scale = np.exp(mu))
+        
 
-        yest = np.linspace(eps, 1-eps, nest)
-        xest = sp.lognorm.ppf(yest, sigma, loc = 0, scale = np.exp(mu))
-
-    fig, ax1 = plt.subplots()
-    ax1.set_title('$\mu$ = %.1f, $\sigma$ = %.1f - CDFm' %(mu,sigma))
+    fig, ax1 = plt.subplots(figsize = (12,8), dpi = 200)
+    
+    #ax1.set_title('$\mu$ = %.1f, $\sigma$ = %.1f - CDFm' %(mu,sigma))
     cdf, = ax1.plot(xgrid,ygrid, color = orange)
-    ax1.set_ylabel('Cumulative Probability', color = orange)
+    ax1.set_ylabel('Cumulative Probability', color = orange, fontsize = 30)
     ax1.legend([cdf], ['CDF'])
-    ax1.set_xlabel('x')
+    ax1.set_xlabel('x', fontsize = 30)
 
     if points == 'CDF':
         pts, = ax1.plot(xest,yest,'ok')
@@ -147,9 +214,10 @@ def CDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points 
 
         pdf, = ax2.plot(x,y, color = blue)
         ax1.legend([pdf,cdf], ['PDF', 'CDF'])
-        ax2.set_ylabel('Probability', color = blue)
-        ax1.tick_params(axis='y', labelcolor=orange)
-        ax2.tick_params(axis='y', labelcolor=blue)
+        ax2.set_ylabel('Probability', color = blue, fontsize = 30)
+        ax1.tick_params(axis='y', labelcolor=orange, labelsize = 18)
+        ax2.tick_params(axis='y', labelcolor=blue, labelsize = 18)
+        ax1.tick_params(axis='x', labelsize = 18)
 
         if points == 'PDF':
             if distribuition == 'lognormal':
@@ -157,11 +225,17 @@ def CDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points 
             elif distribuition == 'normal':
                 pts, = ax2.plot(xest,sp.norm.pdf(xest, loc = mu, scale = sigma), 'ok')
             ax1.legend([pdf,cdf,pts], ['PDF', 'CDF', 'Points'])
+            
+    else:
+          ax2 = ax1
     if grid:
           ax2.vlines(xest,0,yest,linestyle=':')
           ax2.hlines(yest,a,xest,linestyle = ':')
           ypts, = ax1.plot(xest,np.zeros(nest),'rx', ms = 5)
-          ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'Points', 'X Points'])
+          ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'CDF Points', 'X Points'], prop = {'size':18}, loc = 1)
+          plt.tight_layout()
+          #plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/CDFm.png")
+
 
 def PDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', grid = False, points = False):
     """
@@ -244,22 +318,27 @@ def PDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', grid = 
 
         X = np.concatenate([x1[:-1],x2])
         Y = np.concatenate([y1[:-1],y2])
-
+        
+    plt.figure(figsize=(12,8),dpi=200)
     plt.plot(x,y,label = 'PDF')
-    plt.ylabel('Probability')
-    plt.xlabel('x')
-    plt.title('$\mu$ = %.1f, $\sigma$ = %.1f - PDFm' %(mu,sigma))
+    plt.ylabel('Probability', fontsize = 30)
+    plt.xlabel('x', fontsize = 30)
+    #plt.title('$\mu$ = %.1f, $\sigma$ = %.1f - PDFm' %(mu,sigma))
     if points:
-      plt.plot(X,Y,'ok', label = 'points')
+      plt.plot(X,Y,'ok', label = 'PDF points')
 
     if grid:
         plt.vlines(X,0,Y,linestyle=':')
         plt.hlines(Y,a,X,linestyle = ':')
         plt.plot(X,np.zeros(nest),'rx', ms = 5, label = 'X points')
 
-    plt.legend()
+    plt.legend(prop = {'size':18})
+    plt.tick_params(labelsize=18)
+    plt.tight_layout()
+    plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/PDFm.png")
 
-def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False, PDF = False, dPDF = False):
+
+def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False,CDF = True, PDF = False, dPDF = False):
     """
     Returns a generic plot from CDF of a selected distribuition based on iPDF1 discretization.
 
@@ -286,6 +365,9 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
     grid: bool, optional
         If True, a grid of discatization will be show in the plot.
         Defaut is False.
+    CDF: bool, optional
+        If True, the CDF plot will be show.
+        Defaut is True.
     PDF: bool, optional
         If True, the PDF plot will be show.
         Defaut is False.
@@ -300,7 +382,7 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
     from distAnalyze import dpdf
     from scipy.interpolate import interp1d
 
-    ngrid = int(10e3)
+    ngrid = int(1e6)
     eps = 5e-5
     blue = '#1f77b4ff'
     orange = '#ff7f0eff'
@@ -317,24 +399,41 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
         a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
         a,b = a-outlier_inf, b+outlier_sup
        
-    x = np.linspace(a,b,ngrid)
+    x = np.linspace(0.06,b,ngrid)
     y = dpdf(x, mu, sigma, distribuition)
-    y = y/sum(y)
-
-    ygrid = np.sum(np.tri(ngrid)*y,1)
+    difx = np.diff(x)[0]
+    y = y/(sum(y)*difx)
+    
+    ygrid = [y[0]]
+    for i in range(1,ngrid):
+        #cdf.append(np.sum(np.tri(step,i+1,i)*y[:i+1],1))
+        ygrid.append(y[i]+ygrid[i-1])
+        
+    ygrid = ygrid/max(ygrid)
     xgrid = x
 
     interp = interp1d(ygrid,xgrid, fill_value = 'extrapolate')
     yest = np.linspace(eps, max(ygrid)-eps,nest)
     xest = interp(yest)
 
-    fig, ax1 = plt.subplots()
-    ax1.set_title('$\mu$ = %.1f, $\sigma$ = %.1f - iPDF1' %(mu,sigma))
-    ax2 = ax1.twinx()
-    cdf, = ax1.plot(xgrid,ygrid, color = orange)
-    ax1.set_ylabel('Cumulative Probability', color = orange)
-    ax1.legend([cdf], ['CDF'])
-    ax1.set_xlabel('x')
+    fig, ax1 = plt.subplots(figsize=(12,8),dpi=200)
+    #ax1.set_title('$\mu$ = %.1f, $\sigma$ = %.1f - iPDF1' %(mu,sigma))
+    
+    if CDF == True:
+          cdf, = ax1.plot(xgrid,ygrid, color = orange)
+          ax1.set_ylabel('Cumulative Probability', color = orange, fontsize = 30)
+          ax1.legend([cdf], ['CDF'])
+          ax2 = ax1.twinx()
+    else: ax2 = ax1
+    
+    ax1.set_xlabel('x', fontsize = 30)
+    
+    if PDF:
+        if distribuition == 'normal':
+              pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
+        elif distribuition == 'lognormal':
+              pdf, = ax2.plot(x,sp.lognorm.pdf(x,sigma,loc = 0, scale = np.exp(mu)), color = blue, label = 'PDF')
+        ax2.set_ylabel('Probability', color = blue, fontsize = 30)
 
     if points == 'CDF':
         pts, = ax1.plot(xest,yest,'ok')
@@ -342,12 +441,20 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
 
     if dPDF or points == 'PDF':
         
-
-        #dpdf, = ax2.plot(x,y, color = blue)
-        ax1.legend([dpdf,cdf], ['dPDF', 'CDF'])
-        ax2.set_ylabel('Probability', color = blue)
-        ax1.tick_params(axis='y', labelcolor=orange)
-        ax2.tick_params(axis='y', labelcolor=blue)
+        if CDF:
+              dpdf, = ax2.plot(x,y, color = blue)
+              ax1.tick_params(axis='y', labelcolor=orange, labelsize = 18)
+              ax1.tick_params(axis='x', labelsize = 18)
+              ax2.tick_params(axis='y', labelcolor=blue, labelsize = 18)
+              
+        else:
+              dpdf, = ax2.plot(x,y, color = orange, label = 'dPDF')
+              ax2.set_ylabel('Probability',color = 'black')
+              ax2.tick_params(labelsize = 18)
+        
+        #ax1.legend([dpdf,cdf], ['dPDF', 'CDF'])
+        
+       
 
         if points == 'PDF':
             if distribuition == 'lognormal':
@@ -358,18 +465,24 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
                 pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
                 pts, = ax2.plot(xest,sp.norm.pdf(xest, loc = mu, scale = sigma), 'ok')
                
-            ax1.legend([pdf,cdf,pts], ['PDF', 'CDF', 'Points'])
+            ax1.legend([pdf,cdf,pts], ['PDF', 'CDF', 'iPDF1 Points'],prop = {'size':18})
     if grid:
           ax1.vlines(xest,0,yest,linestyle=':')
           ax1.hlines(yest,a,xest,linestyle = ':')
           ypts, = ax1.plot(xest,np.zeros(nest),'rx', ms = 5)
-          ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'Points', 'X Points'])
+          ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'iPDF1 Points', 'X Points'],prop = {'size':18}, loc = 1)
+# =============================================================================
+#     ax1.tick_params(axis='y', labelcolor=orange, labelsize = 18)
+#     ax1.tick_params(axis='x', labelsize = 18)
+#     ax2.tick_params(axis='y', labelcolor=blue, labelsize = 18)      
+# =============================================================================
+    #ax1.legend(prop = {'size':18}, loc = 1)
+    plt.tight_layout()
+    #plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/iPDF1_1.png")
     
-    if PDF:
-        pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
         
         
-def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False, PDF = False, dPDF = False):
+def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False, PDF = False, dPDF = False, CDF = True):
     """
     Returns a generic plot from CDF of a selected distribuition based on iPDF1 discretization.
 
@@ -427,14 +540,15 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
         a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
         a,b = a-outlier_inf, b+outlier_sup
        
-    x = np.linspace(a,b,ngrid)
+    x = np.linspace(0.04,b,ngrid)
     y = ddpdf(x, mu, sigma, distribuition)
-    y = y/sum(y)
-
+    difx = np.diff(x)[0]
+    y = y/(sum(y)*difx)
     #ygrid = np.sum(np.tri(ngrid)*y,1)
     ygrid = [y[0]]
     for i in range(1,ngrid):
         ygrid.append(y[i]+ygrid[i-1])
+    ygrid = ygrid/max(ygrid)
    
     xgrid = x
 
@@ -442,27 +556,52 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
     yest = np.linspace(eps, max(ygrid)-eps,nest)
     xest = interp(yest)
 
-    fig, ax1 = plt.subplots()
-    ax2 = ax1.twinx()
-    ax1.set_title('$\mu$ = %.1f, $\sigma$ = %.1f - iPDF2' %(mu,sigma))
-    cdf, = ax1.plot(xgrid,ygrid, color = orange)
-    ax1.set_ylabel('Cumulative Probability', color = orange)
-    ax1.legend([cdf], ['CDF'])
-    ax1.set_xlabel('x')
+    fig, ax1 = plt.subplots(figsize = (12,8),dpi=200)
+    
+    #ax1.set_title('$\mu$ = %.1f, $\sigma$ = %.1f - iPDF2' %(mu,sigma))
+    if CDF:
+          ax2 = ax1.twinx()
+          cdf, = ax1.plot(xgrid,ygrid, color = orange)
+          ax1.set_ylabel('Cumulative Probability', color = orange, fontsize = 30)
+          ax1.legend([cdf], ['CDF'])
+          ax1.set_xlabel('x', fontsize = 30)
+          ax1.tick_params(axis='x', labelsize = 18)
+          ax1.tick_params(axis='y', labelsize = 18, labelcolor = orange)
+          ax2.tick_params(axis='y', labelsize = 18, labelcolor = blue)
+          ax2.set_ylabel('Probability',color = blue, fontsize = 30)
+    else:
+          ax2 = ax1
+          ax1.set_ylabel('Probability', fontsize = 30)
+          ax1.tick_params(labelsize = 18)
+          ax1.set_xlabel('x', fontsize = 30)
+
+
+
 
     if points == 'CDF':
         pts, = ax1.plot(xest,yest,'ok')
         ax1.legend([cdf,pts], ['CDF', 'Points'])
+        
+    if PDF:
+        if distribuition == 'lognormal':
+            pdf, = ax2.plot(x,sp.lognorm.pdf(x, sigma, loc = 0, scale = np.exp(mu)), color = blue, label = 'PDF')
+        elif distribuition == 'normal':
+            pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
+        
 
     if dPDF or points == 'PDF':
         
-
-        #dpdf, = ax2.plot(x,y, color = blue)
+        if CDF: 
+              color = blue
+              ax2.set_ylabel('Probability', color = color, fontsize = 30)
+              ax1.tick_params(axis='y', labelcolor=orange, labelsize = 18)
+              ax2.tick_params(axis='y', labelcolor=blue, labelsize = 18)
+        
+        else: 
+              color = orange 
+        dpdf, = ax2.plot(x,y, color = color, label = 'dPDF2')
         #ax1.legend([dpdf,cdf], ['dPDF', 'CDF'])
-        ax2.set_ylabel('Probability', color = blue)
-        ax1.tick_params(axis='y', labelcolor=orange)
-        ax2.tick_params(axis='y', labelcolor=blue)
-
+        
         if points == 'PDF':
             if distribuition == 'lognormal':
                 pdf, = ax2.plot(x,sp.lognorm.pdf(x, sigma, loc = 0, scale = np.exp(mu)), color = blue)
@@ -477,11 +616,40 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
           ax1.vlines(xest,0,yest,linestyle=':')
           ax1.hlines(yest,a,xest,linestyle = ':')
           ypts, = ax1.plot(xest,np.zeros(nest),'rx', ms = 5)
-          ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'Points', 'X Points'])
-    
-    if PDF:
-        if distribuition == 'lognormal':
-            pdf, = ax2.plot(x,sp.norm.pdf(x, sigma, loc = 0, scale = np.exp(mu)), color = blue)
-        elif distribuition == 'normal':
-            pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
+          ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'iPDF2 Points', 'X Points'], prop = {'size':18}, loc = 1)
+    plt.legend(prop = {'size':18}, loc = 1)
+    plt.tight_layout()
+    plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/iPDF2_1.png")
+
+    plt.hist()
         
+def logs(sigma = 1, mu = 0, area = 0.9999, zoom = False):
+      from scipy.stats import lognorm
+      import numpy as np
+      import matplotlib.pyplot as plt
+      from numpy import log, exp
+      
+      scale = median = exp(mu)
+      mode = exp(mu - sigma**2)
+      mean = exp(mu + (sigma**2/2))
+      shape = sigma
+      a,b = lognorm.interval(area, shape, loc = 0, scale = np.exp(mu))
+      x = np.linspace(a,b,1000000)
+      mode = exp(mu - shape**2)
+      mean = exp(mu + (shape**2/2))
+      pdf = lognorm.pdf(x,shape, loc = 0, scale = scale)
+      plt.figure(figsize = (12,8), dpi=200)
+      plt.plot(x,pdf, label = 'PDF ($\sigma = %.2f$)' %shape)
+      plt.vlines(mode,0,pdf.max(), linestyle = ':', label = 'Mode = %.2f' %mode)
+      plt.vlines(mean,0,lognorm.pdf(mean,shape,loc=0,scale=scale),color = 'green', linestyle = '--',label = 'Mean = %.2f' %mean)
+      plt.vlines(median,0,lognorm.pdf(median,shape,loc=0,scale=scale),color = 'blue', label = 'Median = %.2f' %median)
+      plt.legend(loc = 1)
+      
+      plt.legend(prop = {'size':18})
+      plt.xlabel('x', fontsize = 45)
+      plt.ylabel('Probability', fontsize = 45)
+      plt.xticks(size = 18)
+      plt.yticks(size = 18)
+      plt.tight_layout()
+      plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/sigma_%.2f.png" %sigma)
+      
