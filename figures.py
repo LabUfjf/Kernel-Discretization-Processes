@@ -98,6 +98,9 @@ def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
     sigma: int, optional
         Specifies the standard desviation of a distribuition.
         Defaut is 1.
+    data: int, optional
+        If data > 0, a randon data will be inserted insted analitcs data.
+        Defaut is 0.
     outlier: int, optional
         Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
         Defaut is 0
@@ -136,6 +139,9 @@ def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
               
               yest = np.linspace(eps, 1-eps, nest)
               xest = sp.norm.ppf(yest, loc = mu, scale = sigma)
+              ygrid = np.linspace(eps, 1-eps, ngrid)
+              xgrid = sp.norm.ppf(ygrid, loc = mu, scale = sigma)
+              
               
         else:
               d = np.random.normal(loc = mu, scale = sigma, size = data)
@@ -143,9 +149,11 @@ def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
               a,b = min(d),max(d)
               xest = np.linspace(a,b,data)
               yest = ecdf(xest)
-              interp = interp1d(yest,xest,fill_value = 'extrapolate', kind = 'nearest')
+              interp = interp1d(yest,xest,fill_value = 'extrapolate', kind = 'linear')
               yest = np.linspace(eps,1-eps,nest)
               xest = interp(yest)
+              ygrid = np.linspace(eps, 1-eps, ngrid)
+              xgrid = interp(ygrid)
               
               #a,b = min(d)-outlier_inf,max(d)+outlier_sup
               
@@ -154,12 +162,10 @@ def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
               #yest = np.cumsum(yest)/max(np.cumsum(yest))
               #yest = np.linspace(min(yest),max(yest),nest)
               
-        x = np.linspace(a,b,ngrid)
-        y = sp.norm.pdf(x,loc = mu, scale = sigma)
         
         
-        ygrid = np.linspace(eps, 1-eps, ngrid)
-        xgrid = sp.norm.ppf(ygrid, loc = mu, scale = sigma)
+        
+        
 
     elif distribuition == 'lognormal':
         outlier_inf = 0
@@ -170,6 +176,8 @@ def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
       
               yest = np.linspace(eps, 1-eps, nest)
               xest = sp.lognorm.ppf(yest, sigma, loc = 0, scale = np.exp(mu))
+              ygrid = np.linspace(eps, 1-eps, ngrid)
+              xgrid = sp.lognorm.ppf(ygrid, sigma, loc = 0, scale = np.exp(mu))
               
         else:
               d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
@@ -178,9 +186,11 @@ def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
               a,b = min(d),max(d)
               xest = np.linspace(a,b,nest)
               yest = ecdf(xest)
-              interp = interp1d(yest,xest,fill_value = 'extrapolate', kind = 'nearest')
+              interp = interp1d(yest,xest,fill_value = 'extrapolate', kind = 'linear')
               yest = np.linspace(eps,1-eps,nest)
               xest = interp(yest)
+              ygrid = np.linspace(eps, 1-eps, ngrid)
+              xgrid = interp(ygrid)#sp.lognorm.ppf(ygrid, sigma, loc = 0, scale = np.exp(mu))
               
               #yest,xest = np.histogram(d,bins = 'fd',normed = True)
               #xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
@@ -189,8 +199,7 @@ def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
               
             
               
-        ygrid = np.linspace(eps, 1-eps, ngrid)
-        xgrid = sp.lognorm.ppf(ygrid, sigma, loc = 0, scale = np.exp(mu))
+        
               
         x = np.linspace(a,b,ngrid)
         y = sp.lognorm.pdf(x,sigma, loc = 0, scale = np.exp(mu))
@@ -237,7 +246,7 @@ def CDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
           #plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/CDFm.png")
 
 
-def PDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', grid = False, points = False):
+def PDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal', grid = False, points = False):
     """
     Returns a generic plot from PDF of a selected distribuition based on PDFm discretization.
 
@@ -251,6 +260,9 @@ def PDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', grid = 
     sigma: int, optional
         Specifies the standard desviation of a distribuition.
         Defaut is 1.
+    data: int, optional
+        If data > 0, a randon data will be inserted insted analitcs data.
+        Defaut is 0.
     outlier: int, optional
         Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
         Defaut is 0
@@ -275,46 +287,81 @@ def PDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', grid = 
     if not nest %2:
           nest = nest -1
     if distribuition == 'normal':
-        outlier_inf = outlier_sup = outlier
-        a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
-        a,b = a-outlier_inf, b+outlier_sup
-        x = np.linspace(a,b,ngrid)
-        y = sp.norm.pdf(x,loc = mu, scale = sigma)
         
-        X1 = np.linspace(a,mu,ngrid)
-        Y1 = sp.norm.pdf(X1,loc = mu, scale = sigma)
-        interp = interp1d(Y1,X1)
-        y1 = np.linspace(Y1[0],Y1[-1],nest//2+1)
-        x1 = interp(y1)
-
-        X2 = np.linspace(mu,b,ngrid)
-        Y2 = sp.norm.pdf(X2, loc = mu, scale = sigma)
-        interp = interp1d(Y2,X2)
-        y2 = np.flip(y1,0)
-        x2 = interp(y2)
+        outlier_inf = outlier_sup = outlier
+        if not data:
+              a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
+              a,b = a-outlier_inf, b+outlier_sup
+              x = np.linspace(a,b,ngrid)
+              y = sp.norm.pdf(x,loc = mu, scale = sigma)
+              
+              X1 = np.linspace(a,mu,ngrid)
+              Y1 = sp.norm.pdf(X1,loc = mu, scale = sigma, assume_sorted = False)
+              interp = interp1d(Y1,X1)
+              y1 = np.linspace(Y1[0],Y1[-1],nest//2+1)
+              x1 = interp(y1)
+      
+              X2 = np.linspace(mu,b,ngrid)
+              Y2 = sp.norm.pdf(X2, loc = mu, scale = sigma)
+              interp = interp1d(Y2,X2)
+              y2 = np.flip(y1,0)
+              x2 = interp(y2)
+        else:
+              d = np.random.normal(mu,sigma,data)
+              a,b = min(d)-outlier_inf,max(d)+outlier_sup
+              yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              M = np.where(yest == max(yest))[0][0]
+              m = np.where(yest == min(yest))[0][0]
+              interpL = interp1d(yest[:M+1],xest[:M+1], assume_sorted = False, fill_value= 'extrapolate')
+              interpH = interp1d(yest[M:],xest[M:], assume_sorted= False, fill_value='extrapolate')
+              
+              y1 = np.linspace(yest[m],yest[M],nest//2+1)
+              x1 = interpL(y1)
+              
+              y2 = np.flip(y1,0)
+              x2 = interpH(y2)
+              
         X = np.concatenate([x1[:-1],x2])
         Y = np.concatenate([y1[:-1],y2])
 
     elif distribuition == 'lognormal':
         outlier_inf = 0
         outlier_sup = outlier
-        mode = np.exp(mu-sigma**2)
-        a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
-        a,b = a-outlier_inf, b+outlier_sup
-        x = np.linspace(a,b,ngrid)
-        y = sp.lognorm.pdf(x,sigma, loc = 0, scale = np.exp(mu))
-
-        X1 = np.linspace(a,mode,ngrid)
-        Y1 = sp.lognorm.pdf(X1,sigma, loc = 0, scale = np.exp(mu))
-        interp = interp1d(Y1,X1)
-        y1 = np.linspace(Y1[0],Y1[-1],nest//2+1)
-        x1 = interp(y1)
-
-        X2 = np.linspace(mode,b,ngrid)
-        Y2 = sp.lognorm.pdf(X2, sigma, loc = 0, scale = np.exp(mu))
-        interp = interp1d(Y2,X2)
-        y2 = np.flip(y1,0)
-        x2 = interp(y2)
+        if not data:
+              mode = np.exp(mu-sigma**2)
+              a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              a,b = a-outlier_inf, b+outlier_sup
+              x = np.linspace(a,b,ngrid)
+              y = sp.lognorm.pdf(x,sigma, loc = 0, scale = np.exp(mu))
+      
+              X1 = np.linspace(a,mode,ngrid)
+              Y1 = sp.lognorm.pdf(X1,sigma, loc = 0, scale = np.exp(mu))
+              interp = interp1d(Y1,X1)
+              y1 = np.linspace(Y1[0],Y1[-1],nest//2+1)
+              x1 = interp(y1)
+      
+              X2 = np.linspace(mode,b,ngrid)
+              Y2 = sp.lognorm.pdf(X2, sigma, loc = 0, scale = np.exp(mu))
+              interp = interp1d(Y2,X2)
+              y2 = np.flip(y1,0)
+              x2 = interp(y2)
+        else:
+              d = np.random.lognormal(mu,sigma,data)
+              a,b = min(d)-outlier_inf,max(d)+outlier_sup
+              yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              M = np.where(yest == max(yest))[0][0]
+              m = np.where(yest == min(yest))[0][0]
+              interpL = interp1d(yest[:M+1],xest[:M+1], assume_sorted = False, fill_value= 'extrapolate')
+              interpH = interp1d(yest[M:],xest[M:], assume_sorted= False, fill_value='extrapolate')
+              
+              y1 = np.linspace(yest[m],yest[M],nest//2+1)
+              x1 = interpL(y1)
+              
+              y2 = np.flip(y1,0)
+              x2 = interpH(y2)
+              
 
         X = np.concatenate([x1[:-1],x2])
         Y = np.concatenate([y1[:-1],y2])
@@ -335,10 +382,10 @@ def PDFm(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', grid = 
     plt.legend(prop = {'size':18})
     plt.tick_params(labelsize=18)
     plt.tight_layout()
-    plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/PDFm.png")
+    #plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/PDFm.png")
 
 
-def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False,CDF = True, PDF = False, dPDF = False):
+def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, data = 0, distribuition = 'normal', points = None, grid = False,CDF = True, PDF = False, dPDF = False):
     """
     Returns a generic plot from CDF of a selected distribuition based on iPDF1 discretization.
 
@@ -355,6 +402,9 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
     outlier: int, optional
         Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
         Defaut is 0
+    data: int, optional
+        If data > 0, a randon data will be inserted insted analitcs data.
+        Defaut is 0.
     distribuition: str, optional
         Select the distribuition to analyze.
         ('normal', 'lognormal')
@@ -389,28 +439,49 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
 
     if distribuition == 'normal':
         outlier_inf = outlier_sup = outlier
-        a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
-        a,b = a-outlier_inf, b+outlier_sup
-        
+        if not data:
+              a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
+              a,b = a-outlier_inf, b+outlier_sup
+              x = np.linspace(a,b,ngrid)
+              y = dpdf(x, mu, sigma, distribuition)
+              xgrid = x
+        else:
+              d = np.random.normal(mu,sigma,data)
+              a,b = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              
+              y = abs(diff(mediaMovel(y,10)))
+              xgrid = x[:-1]
 
     elif distribuition == 'lognormal':
         outlier_inf = 0
         outlier_sup = outlier
-        a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
-        a,b = a-outlier_inf, b+outlier_sup
-       
-    x = np.linspace(0.06,b,ngrid)
-    y = dpdf(x, mu, sigma, distribuition)
-    difx = np.diff(x)[0]
-    y = y/(sum(y)*difx)
-    
-    ygrid = [y[0]]
-    for i in range(1,ngrid):
-        #cdf.append(np.sum(np.tri(step,i+1,i)*y[:i+1],1))
-        ygrid.append(y[i]+ygrid[i-1])
+        if not data:
+              a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              a,b = a-outlier_inf, b+outlier_sup
+              
+              x = np.linspace(a,b,ngrid)
+              y = dpdf(x, mu, sigma, distribuition)
+              xgrid = x
+              
+        else:
+              d = np.random.lognormal(mu,sigma,data)
+              a,b = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              
+              y = abs(diff(mediaMovel(y,10)))
+              xgrid = x[:-1]
+              
+    difx = diff(x)[0]
+    y = abs(y/(sum(y)*difx))
         
+    ygrid = np.cumsum(y)
     ygrid = ygrid/max(ygrid)
-    xgrid = x
+    
 
     interp = interp1d(ygrid,xgrid, fill_value = 'extrapolate')
     yest = np.linspace(eps, max(ygrid)-eps,nest)
@@ -482,7 +553,7 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
     
         
         
-def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points = None, grid = False, PDF = False, dPDF = False, CDF = True):
+def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, data = 0, distribuition = 'normal', points = None, grid = False, PDF = False, dPDF = False, CDF = True):
     """
     Returns a generic plot from CDF of a selected distribuition based on iPDF1 discretization.
 
@@ -498,7 +569,10 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
         Defaut is 1.
     outlier: int, optional
         Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
-        Defaut is 0
+        Defaut is 0.
+    data: int, optional
+        If data > 0, a randon data will be inserted insted analitcs data.
+        Defaut is 0.
     distribuition: str, optional
         Select the distribuition to analyze.
         ('normal', 'lognormal')
@@ -530,27 +604,52 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
 
     if distribuition == 'normal':
         outlier_inf = outlier_sup = outlier
-        a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
-        a,b =   a-outlier_inf, b+outlier_sup
-        
+        if not data:
+              a,b = sp.norm.interval(0.9999, loc = mu, scale = sigma)
+              a,b =   a-outlier_inf, b+outlier_sup
+              
+              x = np.linspace(a,b,ngrid)
+              y = ddpdf(x, mu, sigma, distribuition)
+              xgrid = x
+              
+        else:
+              d = np.random.normal(mu,sigma,data)
+              a,b = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              
+              y = abs(diff(mediaMovel(y,10),2))
+              xgrid = x[:-2]
 
     elif distribuition == 'lognormal':
         outlier_inf = 0
         outlier_sup = outlier
-        a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
-        a,b = a-outlier_inf, b+outlier_sup
-       
-    x = np.linspace(0.04,b,ngrid)
-    y = ddpdf(x, mu, sigma, distribuition)
+        if not data:
+              a,b = sp.lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              a,b = a-outlier_inf, b+outlier_sup
+              
+              x = np.linspace(a,b,ngrid)
+              y = ddpdf(x, mu, sigma, distribuition)
+              xgrid = x
+        else:
+              d = np.random.lognormal(mu,sigma,data)
+              a,b = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              
+              y = abs(diff(mediaMovel(y,10),2))
+              xgrid = x[:-2]
+    
     difx = np.diff(x)[0]
     y = y/(sum(y)*difx)
     #ygrid = np.sum(np.tri(ngrid)*y,1)
-    ygrid = [y[0]]
-    for i in range(1,ngrid):
-        ygrid.append(y[i]+ygrid[i-1])
+    ygrid = np.cumsum(y)
+    
     ygrid = ygrid/max(ygrid)
    
-    xgrid = x
+    
 
     interp = interp1d(ygrid,xgrid, fill_value = 'extrapolate')
     yest = np.linspace(eps, max(ygrid)-eps,nest)
@@ -619,11 +718,11 @@ def iPDF2(nest, mu = 0, sigma = 1, outlier = 0, distribuition = 'normal', points
           ax1.legend([pdf,cdf,pts,ypts], ['PDF', 'CDF', 'iPDF2 Points', 'X Points'], prop = {'size':18}, loc = 1)
     plt.legend(prop = {'size':18}, loc = 1)
     plt.tight_layout()
-    plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/iPDF2_1.png")
+    #plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/iPDF2_1.png")
 
-    plt.hist()
+ 
         
-def logs(sigma = 1, mu = 0, area = 0.9999, zoom = False):
+def logs(sigma = 1, mu = 0, area = 0.9999):
       from scipy.stats import lognorm
       import numpy as np
       import matplotlib.pyplot as plt
@@ -651,5 +750,12 @@ def logs(sigma = 1, mu = 0, area = 0.9999, zoom = False):
       plt.xticks(size = 18)
       plt.yticks(size = 18)
       plt.tight_layout()
-      plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/sigma_%.2f.png" %sigma)
+      #plt.savefig("/media/rafael/DiscoCompartilhado/Faculdade/Bolsa - Atlas/KernelDensityEstimation-Python/Kernel-Discretization-Processes/Figures_log/sigma_%.2f.png" %sigma)
       
+def mediaMovel(x,n):
+      for i in range(len(x)):
+            if i < n//2:
+                  x[i] = mean(x[:n//2])
+            else:
+                  x[i] = mean(x[i-n//2:i+n//2])
+      return x
