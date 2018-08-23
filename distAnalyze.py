@@ -11,6 +11,9 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
     outlier: int, optional
         Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
         Defaut is 0
+    data: int, optional
+        If data > 0, a randon data will be inserted insted analitcs data.
+        Defaut is 0.
     kinds: str or array, optional
         specifies the kind of distribuition to analize.
         ('Linspace', 'CDFm', 'PDFm', 'iPDF1', 'iPDF2', 'all').
@@ -45,6 +48,12 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
     plot: bool, optional
         If True, a plot will be ploted with the analyzes
         Defaut is True
+        
+    Returns
+    -------
+    a, [b,c]: float and float of ndarray. area,[probROIord,areaROIord]
+       returns the sum of total error area and the 'x' and 'y' values.   
+    
 
     """    
     import numpy as np
@@ -147,11 +156,11 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
             
             
         elif kind == 'PDFm':
-            xest, yest = PDF(nest,mu,sigma, distribuition, outlier)
+            xest, yest = PDF(nest,mu,sigma, distribuition, outlier, data)
         elif kind == 'iPDF1':
-            xest, yest = dPDF(nest,mu,sigma, distribuition, outlier)
+            xest, yest = dPDF(nest,mu,sigma, distribuition, outlier, data)
         elif kind == 'iPDF2':
-            xest, yest = ddPDF(nest,mu,sigma, distribuition, outlier)      
+            xest, yest = ddPDF(nest,mu,sigma, distribuition, outlier, data)      
        
         
         fest = interp1d(xest,pdf(xest,mu, sigma,distribuition),kind = interpolator, bounds_error = False, fill_value = 'extrapolate')
@@ -215,7 +224,9 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
     ----------
     nest: ndarray, int
         The array of the estimation points (e.g. nest = [100,200,300,400,500]).
-   
+    data: int, optional
+        If data > 0, a randon data will be inserted insted analitcs data.
+        Defaut is 0.
     outlier: int, optional
         Is the point of an outlier event, e.g outlier = 50 will put an event in -50 and +50 if mu = 0.
         Defaut is 0
@@ -254,6 +265,11 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
         If True, a plot will be ploted with the analyzes in 3d with Nest x error x axis
         If False, a 2d plot will be ploted with Nest x Area
         Defaut is True
+        
+    Returns
+    -------
+    a,b,c
+    return the number of estimation points, error area and distribuition if plot3 is True
 
     """    
     
@@ -355,44 +371,79 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
 # 
 # =============================================================================
 
-def PDF(pts,mu,sigma, distribuition, outlier = 0):
+def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0):
     from scipy.stats import norm, lognorm
     import numpy as np
     from scipy.interpolate import interp1d
     
     if distribuition == 'normal':
-        inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
         outlier_inf = outlier_sup = outlier
-
-        X1 = np.linspace(inf-outlier,mu,int(1e6))
-        Y1 = norm.pdf(X1, loc = mu, scale = sigma)
-        interp = interp1d(Y1,X1)
-        y1 = np.linspace(Y1[0],Y1[-1],pts//2+1)
-        x1 = interp(y1)
-        
-        X2 = np.linspace(mu,sup+outlier,int(1e6))
-        Y2 = norm.pdf(X2, loc = mu, scale = sigma)
-        interp = interp1d(Y2,X2)
-        y2 = np.flip(y1,0)
-        x2 = interp(y2)
+        if not data:   
+              inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
+              
+      
+              X1 = np.linspace(inf-outlier,mu,int(1e6))
+              Y1 = norm.pdf(X1, loc = mu, scale = sigma)
+              interp = interp1d(Y1,X1)
+              y1 = np.linspace(Y1[0],Y1[-1],pts//2+1)
+              x1 = interp(y1)
+              
+              X2 = np.linspace(mu,sup+outlier,int(1e6))
+              Y2 = norm.pdf(X2, loc = mu, scale = sigma)
+              interp = interp1d(Y2,X2)
+              y2 = np.flip(y1,0)
+              x2 = interp(y2)
+              
+        else:
+              d = np.random.normal(mu,sigma,data)
+              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              M = np.where(yest == max(yest))[0][0]
+              m = np.where(yest == min(yest))[0][0]
+              interpL = interp1d(yest[:M+1],xest[:M+1], assume_sorted = False, fill_value= 'extrapolate')
+              interpH = interp1d(yest[M:],xest[M:], assume_sorted= False, fill_value='extrapolate')
+              
+              y1 = np.linspace(yest[m],yest[M],pts//2+1)
+              x1 = interpL(y1)
+              
+              y2 = np.flip(y1,0)
+              x2 = interpH(y2)
 
     elif distribuition == 'lognormal':
-        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
         outlier_inf = 0
-        outlier_sup = outlier
-        mode = np.exp(mu - sigma**2)
-        
-        X1 = np.linspace(inf-outlier_inf,mode,int(1e6))
-        Y1 = lognorm.pdf(X1, sigma, loc = 0, scale = np.exp(mu))
-        interp = interp1d(Y1,X1)
-        y1 = np.linspace(Y1[0],Y1[-1],pts//2+1)
-        x1 = interp(y1)
-        
-        X2 = np.linspace(mode,sup+outlier_sup,int(1e6))
-        Y2 = lognorm.pdf(X2, sigma, loc = 0, scale = np.exp(mu))
-        interp = interp1d(Y2,X2)
-        y2 = np.flip(y1,0)
-        x2 = interp(y2)
+        outlier_sup = outlier  
+        if not data:  
+              inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              
+              mode = np.exp(mu - sigma**2)
+              
+              X1 = np.linspace(inf-outlier_inf,mode,int(1e6))
+              Y1 = lognorm.pdf(X1, sigma, loc = 0, scale = np.exp(mu))
+              interp = interp1d(Y1,X1)
+              y1 = np.linspace(Y1[0],Y1[-1],pts//2+1)
+              x1 = interp(y1)
+              
+              X2 = np.linspace(mode,sup+outlier_sup,int(1e6))
+              Y2 = lognorm.pdf(X2, sigma, loc = 0, scale = np.exp(mu))
+              interp = interp1d(Y2,X2)
+              y2 = np.flip(y1,0)
+              x2 = interp(y2)
+        else:
+              d = np.random.lognormal(mu,sigma,data)
+              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              M = np.where(yest == max(yest))[0][0]
+              m = np.where(yest == min(yest))[0][0]
+              interpL = interp1d(yest[:M+1],xest[:M+1], assume_sorted = False, fill_value= 'extrapolate')
+              interpH = interp1d(yest[M:],xest[M:], assume_sorted= False, fill_value='extrapolate')
+              
+              y1 = np.linspace(yest[m],yest[M],pts//2+1)
+              x1 = interpL(y1)
+              
+              y2 = np.flip(y1,0)
+              x2 = interpH(y2)
        
         
     X = np.concatenate([x1[:-1],x2])
@@ -400,30 +451,52 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0):
     
     return X,Y
 
-def dPDF(pts,mu,sigma, distribuition, outlier = 0):
+def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10):
     import numpy as np
     from scipy.interpolate import interp1d
-    from distAnalyze import dpdf
+    from distAnalyze import dpdf, mediaMovel
     from scipy.stats import norm, lognorm
+    
     eps = 5e-5
     ngrid = int(1e6)
 
     if distribuition == 'normal':
-        inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
-        outlier_inf = outlier_sup = outlier
+        outlier_inf = outlier_sup = outlier  
+        if not data:  
+              inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
+              x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
+              y = dpdf(x,mu,sigma,distribuition)
+              
+        else:
+              d = np.random.normal(mu,sigma,data)
+              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              
+              y = abs(np.diff(mediaMovel(y,n)))
+              x = x[:-1]+np.diff(x)[0]/2
+              
     elif distribuition == 'lognormal':
-        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
         outlier_inf = 0
         outlier_sup = outlier
+        if not data:
+              inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
+              y = dpdf(x,mu,sigma,distribuition)
+        else:
+              d = np.random.lognormal(mu,sigma,data)
+              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              
+              y = abs(np.diff(mediaMovel(y,n)))
+              x = x[:-1]+np.diff(x)[0]/2
     #dy = lambda x,u,s : abs(1/(s**3*sqrt(2*pi))*(u-x)*np.exp(-0.5*((u-x)/s)**2))
     
-    x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
-    y = dpdf(x,mu,sigma,distribuition)
-    cdf = [y[0]]
-    #t = time.time()
-    for i in range(1,ngrid):
-        #cdf.append(np.sum(np.tri(step,i+1,i)*y[:i+1],1))
-        cdf.append(y[i]+cdf[i-1])
+  
+    cdf = np.cumsum(y)
        
     #cdf = np.sum(np.tri(len(x))*y,1)    
     #cdf = np.concatenate(cdf)
@@ -437,31 +510,55 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0):
     return X,Y
 
     
-def ddPDF(pts,mu,sigma, distribuition, outlier = 0):
+def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=20):
     import numpy as np
     from scipy.interpolate import interp1d
-    from distAnalyze import ddpdf
+    from distAnalyze import ddpdf, mediaMovel
     from scipy.stats import norm, lognorm
     eps = 5e-5 
     ngrid = int(1e6)
     #ddy = lambda x,u,s: abs(-(s**2-u**2+2*u*x-x**2)/(s**5*sqrt(2*pi))*np.exp(-0.5*((u-x)/s)**2))
     if distribuition == 'normal':
-        inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
         outlier_inf = outlier_sup = outlier
+        if not data:  
+              inf, sup = norm.interval(0.9999, loc = mu, scale = sigma)
+              x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
+              y = ddpdf(x,mu,sigma,distribuition)
+        else:
+              d = np.random.normal(mu,sigma,data)
+              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              
+              y = abs(np.diff(mediaMovel(y,n),2))
+              x = x[:-2]+np.diff(x)[0]
+        
     elif distribuition == 'lognormal':
-        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
         outlier_inf = 0
         outlier_sup = outlier
-    
-    x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
-    y = ddpdf(x,mu,sigma,distribuition)
-    
+        if not data:  
+              inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
+              y = ddpdf(x,mu,sigma,distribuition)
+        else:
+              d = np.random.lognormal(mu,sigma,data)
+              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              
+              y = abs(np.diff(mediaMovel(y,n),2))
+              x = x[:-2]+np.diff(x)[0]
+       
     #cdf = np.sum(np.tri(len(x))*y,1)
-    cdf = [y[0]]
-    for i in range(1,ngrid):
-        cdf.append(y[i]+cdf[i-1])
+    cdf = np.cumsum(y)
+# =============================================================================
+#     for i in range(1,ngrid):
+#         cdf.append(y[i]+cdf[i-1])
     cdf = cdf/max(cdf)
-    
+#     
+# =============================================================================
     interp = interp1d(cdf,x, fill_value = 'extrapolate')
     Y = np.linspace(eps,1-eps,pts)
     X = interp(Y)
@@ -473,6 +570,8 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0):
 def pdf(x, u, s, distribuition):
     import numpy as np
     from numpy import pi, sqrt, log, exp, isnan
+    from scipy.interpolate import interp1d
+
 
     if distribuition == 'normal':
         y = 1/(s*sqrt(2*pi))*exp(-0.5*((x-u)/s)**2)
@@ -486,12 +585,14 @@ def dpdf(x, u, s, distribuition):
     import numpy as np
     from numpy import pi, sqrt, log, exp, isnan
     
+    
     if distribuition == 'normal':
         y = abs(1/(s**3*sqrt(2*pi))*(u-x)*np.exp(-0.5*((u-x)/s)**2))
 
     elif distribuition == 'lognormal':
         y = abs(-exp(-(u-log(x))**2/(2*s**2))*(s**2-u+log(x))/(s**3*x**2*sqrt(2*pi)))
         y[isnan(y)] = 0
+     
     return y
 
 def ddpdf(x, u, s, distribuition):
@@ -505,3 +606,14 @@ def ddpdf(x, u, s, distribuition):
         y = abs(exp(-(log(x)-u)**2/(2*s**2))*(2*s**4-3*s**2*u+3*s**2*log(x)-s**2+u**2-2*u*log(x)+log(x)**2)/(s**5*x**3*sqrt(2*pi)))
         y[isnan(y)] = 0
     return y
+
+
+
+def mediaMovel(x,n):
+      from numpy import mean
+      for i in range(len(x)):
+            if i < n//2:
+                  x[i] = mean(x[:n//2])
+            else:
+                  x[i] = mean(x[i-n//2:i+n//2])
+      return x
