@@ -296,7 +296,7 @@ def PDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
               y = sp.norm.pdf(x,loc = mu, scale = sigma)
               
               X1 = np.linspace(a,mu,ngrid)
-              Y1 = sp.norm.pdf(X1,loc = mu, scale = sigma, assume_sorted = False)
+              Y1 = sp.norm.pdf(X1,loc = mu, scale = sigma)
               interp = interp1d(Y1,X1)
               y1 = np.linspace(Y1[0],Y1[-1],nest//2+1)
               x1 = interp(y1)

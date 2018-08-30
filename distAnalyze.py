@@ -73,7 +73,7 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
         outlier_inf = 0
         outlier_sup = outlier
 
-    ngrid = int(100e3)
+    ngrid = int(1e6)
     truth = pdf
         
     if axis == 'probability':
@@ -215,7 +215,7 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
         
     return area,[probROIord,areaROIord]
 
-def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = True):
+def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = False):
 
     """
     Return an error area between a analitic function and a estimated discretization from a distribuition.
@@ -264,7 +264,7 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
     plot: bool, optional
         If True, a plot will be ploted with the analyzes in 3d with Nest x error x axis
         If False, a 2d plot will be ploted with Nest x Area
-        Defaut is True
+        Defaut is False
         
     Returns
     -------
@@ -493,6 +493,7 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10):
               
               y = abs(np.diff(mediaMovel(y,n)))
               x = x[:-1]+np.diff(x)[0]/2
+              y = y/(np.diff(x)[0]*sum(y))
     #dy = lambda x,u,s : abs(1/(s**3*sqrt(2*pi))*(u-x)*np.exp(-0.5*((u-x)/s)**2))
     
   
@@ -533,6 +534,7 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=20):
               
               y = abs(np.diff(mediaMovel(y,n),2))
               x = x[:-2]+np.diff(x)[0]
+              y = y/(np.diff(x)[0]*sum(y))
         
     elif distribuition == 'lognormal':
         outlier_inf = 0
@@ -550,6 +552,7 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=20):
               
               y = abs(np.diff(mediaMovel(y,n),2))
               x = x[:-2]+np.diff(x)[0]
+              y = y/(np.diff(x)[0]*sum(y))
        
     #cdf = np.sum(np.tri(len(x))*y,1)
     cdf = np.cumsum(y)
