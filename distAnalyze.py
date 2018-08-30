@@ -620,3 +620,31 @@ def mediaMovel(x,n):
             else:
                   x[i] = mean(x[i-n//2:i+n//2])
       return x
+
+def crossValidation(ind1,numblock,k,aux):    
+    '''
+    ind1 = eventos
+    numblock = quantidade de blocos
+    k = divisão dos blocos
+    aux = rotação
+    '''
+    
+    import numpy as np
+    
+    inde = ind1
+    
+    event = int(len(inde)/numblock)
+    
+    blocksort = np.roll(range(1,numblock+1),(aux))
+    
+    indet = []
+    
+    for i in blocksort[0:len(blocksort)//k]:
+        indet.append(inde[event*(i-1):event*i])
+        
+    indev = []
+    
+    for i in blocksort[len(blocksort)//k:]:
+        indev.append(inde[event*(i-1):event*i])
+        
+    return [np.concatenate(indet), np.concatenate(indev)]
