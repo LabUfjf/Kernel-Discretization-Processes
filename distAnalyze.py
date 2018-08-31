@@ -188,7 +188,7 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
             divi.append(len(np.intersect1d(np.where(xest >= min(xgridROI[i]))[0], np.where(xest < max(xgridROI[i]))[0])))
 
         diff2 = np.concatenate(abs((np.array(yestGrid) - np.array(ytruthGrid))*dx))
-        diff2[np.isnan(diff2)] = 0
+        #diff2[np.isnan(diff2)] = 0
         areaROI = np.sum(diff2,1)
         
         divi = np.array(divi)   
@@ -199,15 +199,16 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
         except:
             probROI = np.mean(ytruthGrid2,1)
         
+        
         probROIord[kind] = np.sort(probROI)
         index = np.argsort(probROI)
         
         areaROIord[kind] = areaROI[index]
-        deletes = ~np.isnan(areaROIord[kind])
-        areaROIord[kind] = areaROIord[kind][deletes]
-        probROIord[kind] = probROIord[kind][deletes]
+        #deletes = ~np.isnan(areaROIord[kind])
+        #areaROIord[kind] = areaROIord[kind][deletes]
+        #probROIord[kind] = probROIord[kind][deletes]
         
-        area = np.append(area,np.mean(areaROIord[kind]))
+        area = np.append(area,np.sum(areaROIord[kind]))
         n = np.append(n,len(probROIord[kind]))
         div[kind] = divi[index]
         if plot:
@@ -348,7 +349,7 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
           ax.show()
           return x,y,np.log10(z[k])
     else:
-          plt.figure(figsize = (12,8),dpi = 100)
+          #plt.figure(figsize = (12,8),dpi = 100)
           for k in kinds:
                 plt.plot(nest,area[k], 'o-', label = k)
           plt.xlabel('Nº of estimation points', fontsize = 30)
