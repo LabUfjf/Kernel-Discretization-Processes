@@ -1,5 +1,5 @@
 
-def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot = True):
+def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal',seed = None, plot = True):
     
     """
     Return an error area between a analitic function and a estimated discretization from a distribuition.
@@ -66,7 +66,7 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
 
     area = []
     n = []
-
+    data = int(data)
     if distribuition == 'normal': 
         outlier_inf = outlier_sup = outlier
     elif distribuition == 'lognormal': 
@@ -89,7 +89,16 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
     probROIord = {}
     areaROIord = {}
     div = {}
-        
+    if seed is not None:
+          np.random.set_state(seed)
+    if data:
+          if distribuition == 'normal':
+                d = np.random.normal(mu,sigma,data)
+          elif distribuition == 'lognormal':
+                d = np.random.lognormal(mu, sigma, data)
+          
+                
+          
     if kinds == 'all': 
         kinds = ['Linspace', 'CDFm', 'PDFm', 'iPDF1', 'iPDF2']
     elif type(kinds) == str:
@@ -113,11 +122,11 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
                   xest = np.linspace(inf-outlier_inf,sup+outlier_sup,nest)
             else:
                   if distribuition == 'normal':
-                        d = np.random.normal(loc = mu, scale = sigma, size = data)
+                        #d = np.random.normal(loc = mu, scale = sigma, size = data)
                         inf,sup = min(d),max(d)
                         xest = np.linspace(inf-outlier_inf,sup+outlier_sup,nest)
                   elif distribuition == 'lognormal':
-                        d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
+                        #d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
                         inf,sup = min(d),max(d)
                         xest = np.linspace(inf-outlier_inf,sup+outlier_sup,nest)
                         
@@ -131,7 +140,7 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
                       xest = norm.ppf(yest, loc = mu, scale = sigma)
                       yest = pdf(xest,mu,sigma,distribuition)
                 else:
-                      d = np.random.normal(loc = mu, scale = sigma, size = data)
+                      #d = np.random.normal(loc = mu, scale = sigma, size = data)
                       ecdf = ECDF(d)
                       inf,sup = min(d),max(d)
                       xest = np.linspace(inf,sup,data)
@@ -145,7 +154,7 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
                       xest = lognorm.ppf(yest, sigma, loc = 0, scale = exp(mu))
                       yest = pdf(xest,mu,sigma,distribuition)
                 else:
-                      d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
+                      #d = np.random.lognormal(mean = mu, sigma = sigma, size = data)
                       ecdf = ECDF(d)
                       inf,sup = min(d),max(d)
                       xest = np.linspace(inf,sup,nest)
@@ -156,11 +165,11 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
             
             
         elif kind == 'PDFm':
-            xest, yest = PDF(nest,mu,sigma, distribuition, outlier, data)
+            xest, yest = PDF(nest,mu,sigma, distribuition, outlier, data, seed)
         elif kind == 'iPDF1':
-            xest, yest = dPDF(nest,mu,sigma, distribuition, outlier, data)
+            xest, yest = dPDF(nest,mu,sigma, distribuition, outlier, data, 10, seed)
         elif kind == 'iPDF2':
-            xest, yest = ddPDF(nest,mu,sigma, distribuition, outlier, data)      
+            xest, yest = ddPDF(nest,mu,sigma, distribuition, outlier, data, 10, seed)      
        
         
         fest = interp1d(xest,pdf(xest,mu, sigma,distribuition),kind = interpolator, bounds_error = False, fill_value = 'extrapolate')
@@ -279,7 +288,7 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
     from mpl_toolkits.mplot3d import Axes3D
     from distAnalyze import diffArea
 
-    
+    seed = np.random.get_state()
     if kinds == 'all': 
         kinds = ['Linspace', 'CDFm', 'PDFm', 'iPDF1', 'iPDF2']
     elif type(kinds) == str:
@@ -289,7 +298,7 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
     areaROIord = {}
     area = {}
     for n in nest:
-        area[n],[probROIord[n],areaROIord[n]] = diffArea(n, outlier, data, kinds, axis, ROI, mu, sigma, weight, interpolator, distribuition, plot = False)
+        area[n],[probROIord[n],areaROIord[n]] = diffArea(n, outlier, data, kinds, axis, ROI, mu, sigma, weight, interpolator, distribuition, seed, plot = False)
         
     #x = np.sort(nest*ROI) #Nest
     #y = np.array(list(probROIord[nest[0]][list(probROIord[nest[0]].keys())[0]])*len(nest)) #Prob
@@ -338,7 +347,7 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
           ax.show()
           return x,y,np.log10(z[k])
     else:
-          plt.figure(figsize = (12,8),dpi = 250)
+          #plt.figure(figsize = (12,8),dpi = 100)
           for k in kinds:
                 plt.plot(nest,area[k], 'o-', label = k)
           plt.xlabel('Nº of estimation points', fontsize = 30)
@@ -371,7 +380,7 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
 # 
 # =============================================================================
 
-def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0):
+def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, seed = None):
     from scipy.stats import norm, lognorm
     import numpy as np
     from scipy.interpolate import interp1d
@@ -395,6 +404,7 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0):
               x2 = interp(y2)
               
         else:
+              np.random.set_state(seed)
               d = np.random.normal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               yest,xest = np.histogram(d,bins = 'fd',normed = True)
@@ -430,6 +440,7 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0):
               y2 = np.flip(y1,0)
               x2 = interp(y2)
         else:
+              np.random.set_state(seed)
               d = np.random.lognormal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               yest,xest = np.histogram(d,bins = 'fd',normed = True)
@@ -451,7 +462,7 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0):
     
     return X,Y
 
-def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10):
+def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None):
     import numpy as np
     from scipy.interpolate import interp1d
     from distAnalyze import dpdf, mediaMovel
@@ -468,6 +479,7 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10):
               y = dpdf(x,mu,sigma,distribuition)
               
         else:
+              np.random.set_state(seed)
               d = np.random.normal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
@@ -485,6 +497,7 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10):
               x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
               y = dpdf(x,mu,sigma,distribuition)
         else:
+              np.random.set_state(seed)
               d = np.random.lognormal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
@@ -511,7 +524,7 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10):
     return X,Y
 
     
-def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=20):
+def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None):
     import numpy as np
     from scipy.interpolate import interp1d
     from distAnalyze import ddpdf, mediaMovel
@@ -526,6 +539,7 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=20):
               x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
               y = ddpdf(x,mu,sigma,distribuition)
         else:
+              np.random.set_state(seed)
               d = np.random.normal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
@@ -544,6 +558,7 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=20):
               x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
               y = ddpdf(x,mu,sigma,distribuition)
         else:
+              np.random.set_state(seed)
               d = np.random.lognormal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
