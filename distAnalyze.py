@@ -224,7 +224,7 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
         
     return area,[probROIord,areaROIord]
 
-def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = False):
+def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = False, seed=None):
 
     """
     Return an error area between a analitic function and a estimated discretization from a distribuition.
@@ -288,7 +288,11 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
     from mpl_toolkits.mplot3d import Axes3D
     from distAnalyze import diffArea
 
-    seed = np.random.get_state()
+    if seed is not None:
+        np.random.set_state(seed)
+    else:
+        seed = np.random.get_state()
+        
     if kinds == 'all': 
         kinds = ['Linspace', 'CDFm', 'PDFm', 'iPDF1', 'iPDF2']
     elif type(kinds) == str:
