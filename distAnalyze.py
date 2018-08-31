@@ -171,8 +171,8 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
         elif kind == 'iPDF2':
             xest, yest = ddPDF(nest,mu,sigma, distribuition, outlier, data, 10, seed)      
        
-        
-        fest = interp1d(xest,pdf(xest,mu, sigma,distribuition),kind = interpolator, bounds_error = False, fill_value = 'extrapolate')
+        YY = pdf(xest,mu, sigma,distribuition)
+        fest = interp1d(xest,YY,kind = interpolator, bounds_error = False, fill_value = (YY[0],YY[-1]))
         
         #fest = lambda x: np.concatenate([fest1(x)[fest1(x) != -1],np.ones(len(fest1(x)[fest1(x) == -1]))*fest1(x)[fest1(x) != -1][-1]])
             
@@ -187,8 +187,9 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
             ytruthGrid2.append([truth1(xgridROI[i],mu,sigma,distribuition)])
             divi.append(len(np.intersect1d(np.where(xest >= min(xgridROI[i]))[0], np.where(xest < max(xgridROI[i]))[0])))
 
-        diff2 = (abs((np.array(yestGrid) - np.array(ytruthGrid))*dx))
-        areaROI = np.sum(np.sum(diff2,1),1)
+        diff2 = np.concatenate(abs((np.array(yestGrid) - np.array(ytruthGrid))*dx))
+        #diff2[np.isnan(diff2)] = 0
+        areaROI = np.sum(diff2,1)
         
         divi = np.array(divi)   
         divi[divi == 0] = 1
@@ -198,15 +199,16 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
         except:
             probROI = np.mean(ytruthGrid2,1)
         
+        
         probROIord[kind] = np.sort(probROI)
         index = np.argsort(probROI)
         
         areaROIord[kind] = areaROI[index]
-        deletes = ~np.isnan(areaROIord[kind])
-        areaROIord[kind] = areaROIord[kind][deletes]
-        probROIord[kind] = probROIord[kind][deletes]
+        #deletes = ~np.isnan(areaROIord[kind])
+        #areaROIord[kind] = areaROIord[kind][deletes]
+        #probROIord[kind] = probROIord[kind][deletes]
         
-        area = np.append(area,np.mean(areaROIord[kind]))
+        area = np.append(area,np.sum(areaROIord[kind]))
         n = np.append(n,len(probROIord[kind]))
         div[kind] = divi[index]
         if plot:
@@ -451,8 +453,8 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, seed = None):
               xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
               M = np.where(yest == max(yest))[0][0]
               m = np.where(yest == min(yest))[0][0]
-              interpL = interp1d(yest[:M+1],xest[:M+1], assume_sorted = False, fill_value= 'extrapolate')
-              interpH = interp1d(yest[M:],xest[M:], assume_sorted= False, fill_value='extrapolate')
+              interpL = interp1d(yest[:M+1],xest[:M+1], fill_value= 'extrapolate')
+              interpH = interp1d(yest[M:],xest[M:], fill_value='extrapolate')
               
               y1 = np.linspace(yest[m],yest[M],pts//2+1)
               x1 = interpL(y1)

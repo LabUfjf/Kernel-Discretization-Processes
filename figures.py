@@ -274,7 +274,7 @@ def PDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
         Show the estimation points along the follow plots ('PDF' or 'CDF')
         Defaut is False.
     grid: bool, optional
-        If True, a grid of discatization will be show in the plot.
+        If True, a grid of discretization will be show in the plot.
         Defaut is False.
     """
 
