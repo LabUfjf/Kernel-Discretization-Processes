@@ -226,15 +226,21 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
         
     return area,[probROIord,areaROIord]
 
-def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = False, seed=None):
+def diffArea3(nest = None, outlier = 0, data = 0, kinds = 'all', axis = 'probability', ROI = 20 , mu = 0, sigma = 1, weight = False, interpolator = 'linear', distribuition = 'normal', plot3d = False, seed=None, hold = False):
 
     """
     Return an error area between a analitic function and a estimated discretization from a distribuition.
 
     Parameters
     ----------
-    nest: ndarray, int
+    nest: ndarray, int, optional
         The array of the estimation points (e.g. nest = [100,200,300,400,500]).
+        if nest = None: 
+              nest = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 
+                      150, 160, 170, 180, 190, 200, 210, 220, 230, 240, 250, 300, 
+                      350, 400, 450, 500, 600, 700, 800, 900, 1000, 1500, 2000, 
+                      2500, 3000, 3500, 4000, 4500, 5000]
+        Defaut is None.
     data: int, optional
         If data > 0, a randon data will be inserted insted analitcs data.
         Defaut is 0.
@@ -276,6 +282,10 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
         If True, a plot will be ploted with the analyzes in 3d with Nest x error x axis
         If False, a 2d plot will be ploted with Nest x Area
         Defaut is False
+    hold: bool, optional
+        If False, a new a plot will be ploted in a new figure, else, a plot 
+        will be ploted in the same figure.
+        Defaut is False.
         
     Returns
     -------
@@ -289,6 +299,9 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     from distAnalyze import diffArea
+
+    if nest is None:     
+       nest = np.concatenate([list(range(10,250,10)),list(range(250,550,50)),list(range(600,1100,100)),list(range(1500,5500,500))])
 
     if seed is not None:
         np.random.set_state(seed)
@@ -353,7 +366,8 @@ def diffArea3(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', 
           ax.show()
           return x,y,np.log10(z[k])
     else:
-          #plt.figure(figsize = (12,8),dpi = 100)
+          if not hold:
+                plt.figure(figsize = (12,8),dpi = 100)
           for k in kinds:
                 plt.plot(nest,area[k], 'o-', label = k)
           plt.xlabel('Nº of estimation points', fontsize = 30)
