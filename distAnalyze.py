@@ -110,7 +110,8 @@ def diffArea(nest, outlier = 0, data = 0, kinds = 'all', axis = 'probability', R
             
         elif distribuition == 'lognormal':
               inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = exp(mu))
-            
+              inf = lognorm.pdf(sup, sigma, loc = 0, scale = np.exp(mu))
+              inf = lognorm.ppf(inf, sigma, loc = 0, scale = np.exp(mu))
 
         xgrid = np.linspace(inf,sup,ngrid)
         xgridROI = xgrid.reshape([ROI,ngrid//ROI])
@@ -443,9 +444,11 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, seed = None):
 
     elif distribuition == 'lognormal':
         outlier_inf = 0
-        outlier_sup = outlier  
+        outlier_sup = outlier
+        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        inf = lognorm.pdf(sup, sigma, loc = 0, scale = np.exp(mu))
+        inf = lognorm.ppf(inf, sigma, loc = 0, scale = np.exp(mu))  
         if not data:  
-              inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
               
               mode = np.exp(mu - sigma**2)
               
@@ -463,9 +466,11 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, seed = None):
         else:
               np.random.set_state(seed)
               d = np.random.lognormal(mu,sigma,data)
-              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              #inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               yest,xest = np.histogram(d,bins = 'fd',normed = True)
               xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              yest = yest[xest<sup]
+              xest = xest[xest<sup]
               M = np.where(yest == max(yest))[0][0]
               m = np.where(yest == min(yest))[0][0]
               interpL = interp1d(yest[:M+1],xest[:M+1], fill_value = 'extrapolate')
@@ -513,17 +518,22 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None):
     elif distribuition == 'lognormal':
         outlier_inf = 0
         outlier_sup = outlier
+        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        inf = lognorm.pdf(sup, sigma, loc = 0, scale = np.exp(mu))
+        inf = lognorm.ppf(inf, sigma, loc = 0, scale = np.exp(mu))
         if not data:
-              inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              
               x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
               y = dpdf(x,mu,sigma,distribuition)
         else:
               np.random.set_state(seed)
               d = np.random.lognormal(mu,sigma,data)
-              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              #inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
               y,x = np.histogram(d,bins = 'fd',normed = True)
               x = np.mean(np.array([x[:-1],x[1:]]),0)
+              y = y[x<sup]
+              x = x[x<sup]
               
               y = abs(np.diff(mediaMovel(y,n)))
               x = x[:-1]+np.diff(x)[0]/2
@@ -574,18 +584,23 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None)
     elif distribuition == 'lognormal':
         outlier_inf = 0
         outlier_sup = outlier
+        inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+        inf = lognorm.pdf(sup, sigma, loc = 0, scale = np.exp(mu))
+        inf = lognorm.ppf(inf, sigma, loc = 0, scale = np.exp(mu))
         if not data:  
-              inf, sup = lognorm.interval(0.9999, sigma, loc = 0, scale = np.exp(mu))
+              
               x = np.linspace(inf-outlier_inf,sup+outlier_sup,ngrid)
               y = ddpdf(x,mu,sigma,distribuition)
         else:
               np.random.set_state(seed)
               d = np.random.lognormal(mu,sigma,data)
-              inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
+              #inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
               y,x = np.histogram(d,bins = 'fd',normed = True)
               x = np.mean(np.array([x[:-1],x[1:]]),0)
-              
+              y = y[x<sup]
+              x = x[x<sup]
+             
               y = abs(np.diff(mediaMovel(y,n),2))
               x = x[:-2]+np.diff(x)[0]
               y = y/(np.diff(x)[0]*sum(y))
