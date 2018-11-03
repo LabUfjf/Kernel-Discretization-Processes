@@ -349,14 +349,14 @@ def PDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
         else:
               d = np.random.lognormal(mu,sigma,data)
               a,b = min(d)-outlier_inf,max(d)+outlier_sup
-              yest,xest = np.histogram(d,bins = 'fd',normed = True)
-              xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
-              M = np.where(yest == max(yest))[0][0]
-              m = np.where(yest == min(yest))[0][0]
-              interpL = interp1d(yest[:M+1],xest[:M+1], assume_sorted = False, fill_value= 'extrapolate')
-              interpH = interp1d(yest[M:],xest[M:], assume_sorted= False, fill_value='extrapolate')
+              y,x = np.histogram(d,bins = 'fd',normed = True)
+              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              M = np.where(y == max(y))[0][0]
+              m = np.where(y == min(y))[0][0]
+              interpL = interp1d(y[:M+1],x[:M+1], assume_sorted = False, fill_value= 'extrapolate')
+              interpH = interp1d(y[M:],x[M:], assume_sorted= False, fill_value='extrapolate')
               
-              y1 = np.linspace(yest[m],yest[M],nest//2+1)
+              y1 = np.linspace(y[m],y[M],nest//2+1)
               x1 = interpL(y1)
               
               y2 = np.flip(y1,0)
@@ -366,7 +366,7 @@ def PDFm(nest, mu = 0, sigma = 1, data = 0, outlier = 0, distribuition = 'normal
         X = np.concatenate([x1[:-1],x2])
         Y = np.concatenate([y1[:-1],y2])
         
-    plt.figure(figsize=(12,8),dpi=200)
+    #plt.figure(figsize=(12,8),dpi=200)
     plt.plot(x,y,label = 'PDF')
     plt.ylabel('Probability', fontsize = 30)
     plt.xlabel('x', fontsize = 30)
@@ -451,9 +451,9 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, data = 0, distribuition = 'norma
               
               y,x = np.histogram(d,bins = 'fd',normed = True)
               x = np.mean(np.array([x[:-1],x[1:]]),0)
-              
+              y2 = y
               y = abs(diff(mediaMovel(y,10)))
-              xgrid = x[:-1]
+              x = xgrid = x[:-1]
 
     elif distribuition == 'lognormal':
         outlier_inf = 0
@@ -472,9 +472,9 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, data = 0, distribuition = 'norma
               
               y,x = np.histogram(d,bins = 'fd',normed = True)
               x = np.mean(np.array([x[:-1],x[1:]]),0)
-              
+              y2 = y
               y = abs(diff(mediaMovel(y,10)))
-              xgrid = x[:-1]
+              x = xgrid = x[:-1]
               
     difx = diff(x)[0]
     y = abs(y/(sum(y)*difx))
@@ -528,13 +528,17 @@ def iPDF1(nest, mu = 0, sigma = 1, outlier = 0, data = 0, distribuition = 'norma
        
 
         if points == 'PDF':
-            if distribuition == 'lognormal':
-                pdf, = ax2.plot(x,sp.lognorm.pdf(x, sigma, loc = 0, scale = np.exp(mu)), color = blue)
-                pts, = ax2.plot(xest,sp.lognorm.pdf(xest, sigma, loc = 0, scale = np.exp(mu)), 'ok')
-                
-            elif distribuition == 'normal':
-                pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
-                pts, = ax2.plot(xest,sp.norm.pdf(xest, loc = mu, scale = sigma), 'ok')
+            if data:
+                  pdf, = ax2.plot(x,y2[:-1], color = blue)
+                  pts, = ax2.plot(xest,sp.lognorm.pdf(xest, sigma, loc = 0, scale = np.exp(mu)), 'ok')
+            else:
+                  if distribuition == 'lognormal':
+                      pdf, = ax2.plot(x,sp.lognorm.pdf(x, sigma, loc = 0, scale = np.exp(mu)), color = blue)
+                      pts, = ax2.plot(xest,sp.lognorm.pdf(xest, sigma, loc = 0, scale = np.exp(mu)), 'ok')
+                      
+                  elif distribuition == 'normal':
+                      pdf, = ax2.plot(x,sp.norm.pdf(x,loc = mu, scale = sigma), color = blue)
+                      pts, = ax2.plot(xest,sp.norm.pdf(xest, loc = mu, scale = sigma), 'ok')
                
             ax1.legend([pdf,cdf,pts], ['PDF', 'CDF', 'iPDF1 Points'],prop = {'size':18})
     if grid:
