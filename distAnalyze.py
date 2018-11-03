@@ -405,6 +405,7 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, seed = None):
     from scipy.stats import norm, lognorm
     import numpy as np
     from scipy.interpolate import interp1d
+    from someFunctions import ash
     eps = 5e-5
     
     if distribuition == 'normal':
@@ -429,7 +430,8 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, seed = None):
               np.random.set_state(seed)
               d = np.random.normal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
-              yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              #yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              xest,yest = ash(d)
               xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
               M = np.where(yest == max(yest))[0][0]
               m = np.where(yest == min(yest))[0][0]
@@ -467,8 +469,9 @@ def PDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, seed = None):
               np.random.set_state(seed)
               d = np.random.lognormal(mu,sigma,data)
               #inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
-              yest,xest = np.histogram(d,bins = 'fd',normed = True)
-              xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              #yest,xest = np.histogram(d,bins = 'fd',normed = True)
+              #xest = np.mean(np.array([xest[:-1],xest[1:]]),0)
+              xest,yest = ash(d)
               yest = yest[xest<sup]
               xest = xest[xest<sup]
               M = np.where(yest == max(yest))[0][0]
@@ -493,6 +496,7 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None):
     from scipy.interpolate import interp1d
     from distAnalyze import dpdf, mediaMovel
     from scipy.stats import norm, lognorm
+    from someFunctions import ash
     
     eps = 5e-5
     ngrid = int(1e6)
@@ -509,10 +513,12 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None):
               d = np.random.normal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
-              y,x = np.histogram(d,bins = 'fd',normed = True)
-              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              #y,x = np.histogram(d,bins = 'fd',normed = True)
+              #x = np.mean(np.array([x[:-1],x[1:]]),0)
+              x,y = ash(d)
               
-              y = abs(np.diff(mediaMovel(y,n)))
+              y = abs(np.diff(y))
+              #y = abs(np.diff(mediaMovel(y,n)))
               x = x[:-1]+np.diff(x)[0]/2
               
     elif distribuition == 'lognormal':
@@ -530,12 +536,14 @@ def dPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None):
               d = np.random.lognormal(mu,sigma,data)
               #inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
-              y,x = np.histogram(d,bins = 'fd',normed = True)
-              x = np.mean(np.array([x[:-1],x[1:]]),0)
+             # y,x = np.histogram(d,bins = 'fd',normed = True)
+             # x = np.mean(np.array([x[:-1],x[1:]]),0)
+              x,y = ash(d)
               y = y[x<sup]
               x = x[x<sup]
               
-              y = abs(np.diff(mediaMovel(y,n)))
+              #y = abs(np.diff(mediaMovel(y,n)))
+              y = abs(np.diff(y))
               x = x[:-1]+np.diff(x)[0]/2
               y = y/(np.diff(x)[0]*sum(y))
     #dy = lambda x,u,s : abs(1/(s**3*sqrt(2*pi))*(u-x)*np.exp(-0.5*((u-x)/s)**2))
@@ -560,6 +568,7 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None)
     from scipy.interpolate import interp1d
     from distAnalyze import ddpdf, mediaMovel
     from scipy.stats import norm, lognorm
+    from someFunctions import ash
     eps = 5e-5 
     ngrid = int(1e6)
     #ddy = lambda x,u,s: abs(-(s**2-u**2+2*u*x-x**2)/(s**5*sqrt(2*pi))*np.exp(-0.5*((u-x)/s)**2))
@@ -574,11 +583,15 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None)
               d = np.random.normal(mu,sigma,data)
               inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
-              y,x = np.histogram(d,bins = 'fd',normed = True)
-              x = np.mean(np.array([x[:-1],x[1:]]),0)
+              #y,x = np.histogram(d,bins = 'fd',normed = True)
+              #x = np.mean(np.array([x[:-1],x[1:]]),0)
               
-              y = abs(np.diff(mediaMovel(y,n),2))
+              x,y = ash(d)
+              y = abs(np.diff(y,2))
               x = x[:-2]+np.diff(x)[0]
+              
+              #y = abs(np.diff(mediaMovel(y,n),2))
+              #x = x[:-2]+np.diff(x)[0]
               y = y/(np.diff(x)[0]*sum(y))
         
     elif distribuition == 'lognormal':
@@ -596,12 +609,18 @@ def ddPDF(pts,mu,sigma, distribuition, outlier = 0, data = 0, n=10, seed = None)
               d = np.random.lognormal(mu,sigma,data)
               #inf,sup = min(d)-outlier_inf,max(d)+outlier_sup
               
-              y,x = np.histogram(d,bins = 'fd',normed = True)
-              x = np.mean(np.array([x[:-1],x[1:]]),0)
+             # y,x = np.histogram(d,bins = 'fd',normed = True)
+             #x = np.mean(np.array([x[:-1],x[1:]]),0)
+             
+              x,y = ash(d)
+              
+              
               y = y[x<sup]
               x = x[x<sup]
-             
-              y = abs(np.diff(mediaMovel(y,n),2))
+              
+              y = abs(np.diff(y,2))
+            
+              #y = abs(np.diff(mediaMovel(y,n),2))
               x = x[:-2]+np.diff(x)[0]
               y = y/(np.diff(x)[0]*sum(y))
        
